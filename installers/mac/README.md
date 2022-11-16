@@ -73,6 +73,45 @@ So the point of running `sudo mv elm /usr/local/bin/` is to turn the `elm` binar
 
 <br/>
 
+## Installing from Source
+
+First, install ghcup in homebrew (or you may manage your own ghc compiler):
+
+```sh
+> brew install ghcup
+```
+
+Then set the following versions:
+
+```sh
+> ghcup set ghc 9.0.2
+> ghcup install cabal
+```
+
+You may need to ensure a proper link to llvm@13. Run:
+
+```sh
+brew install llvm@13
+```
+
+and then in the `ash-compiler` root directory, run:
+
+```
+echo "program-options\n  ghc-options: \"$(pkg-config --cflags libffi)\"" > cabal.project.local
+```
+
+Now you should be able to build with:
+
+```
+cabal build elm
+```
+
+And you can install the elm executable via:
+
+```
+cabal install elm --overwrite-policy=always
+```
+
 ## Uninstall
 
 The following commands should remove everything:
