@@ -1,22 +1,20 @@
-# Elm
+# Ash
 
+<img src="https://github.com/ash-lng/compiler/raw/hayesgm/readme/logo.png" width="100">
+
+----
 A delightful language for reliable webapps.
 
-Check out the [Home Page](http://elm-lang.org/), [Try Online](http://elm-lang.org/try), or [The Official Guide](http://guide.elm-lang.org/)
-
-
-<br>
+Ash is an open, community fork of the [Elm language](http://elm-lang.org).
 
 ## Install
 
-✨ [Install](https://guide.elm-lang.org/install/elm.html) ✨
+Please see the instructions [here](./blob/main/installers/README.md) to compile from source.
 
-For multiple versions, previous versions, and uninstallation, see the instructions [here](https://github.com/elm/compiler/blob/master/installers/README.md).
+## Contributing
 
-<br>
+Ash is an open community, and we are excited to accept improvements in the langauge and standard library. Feel free to create pull requests against this library or open issues to discuss.
 
-## Help
+## License
 
-If you are stuck, ask around on [the Elm slack channel][slack]. Folks are friendly and happy to help with questions!
-
-[slack]: http://elmlang.herokuapp.com/
+Subject to BSD-3 license [here](./blob/main/LICENSE) and separately BSD-3 as retained from [Elm](./blob/main/ELM-LICENSE). All contributors must license contributed code dually under those licenses.
