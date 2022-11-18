@@ -68,7 +68,7 @@ data DecisionTree
       , _edges :: [(Test, DecisionTree)]
       , _default :: Maybe DecisionTree
       }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Test
@@ -80,14 +80,14 @@ data Test
   | IsChr ES.String
   | IsStr ES.String
   | IsBool Bool
-  deriving (Eq, Ord)
+  deriving (Show, Eq, Ord)
 
 
 data Path
   = Index Index.ZeroBased Path
   | Unbox Path
   | Empty
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 

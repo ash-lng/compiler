@@ -30,6 +30,10 @@ type String =
   Utf8.Utf8 ELM_STRING
 
 
+instance Show String where
+  show = toChars
+
+
 data ELM_STRING
 
 

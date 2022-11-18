@@ -16,6 +16,8 @@ module Elm.Interface
   )
   where
 
+import Debug.Trace
+
 
 import Control.Monad (liftM, liftM3, liftM4, liftM5)
 import Data.Binary
@@ -42,20 +44,20 @@ data Interface =
     , _aliases :: Map.Map Name.Name Alias
     , _binops  :: Map.Map Name.Name Binop
     }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Union
   = OpenUnion Can.Union
   | ClosedUnion Can.Union
   | PrivateUnion Can.Union
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Alias
   = PublicAlias Can.Alias
   | PrivateAlias Can.Alias
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Binop =
@@ -65,7 +67,7 @@ data Binop =
     , _op_associativity :: Binop.Associativity
     , _op_precedence :: Binop.Precedence
     }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 
@@ -95,7 +97,7 @@ restrict exports dict =
 
 toOp :: Map.Map Name.Name Can.Annotation -> Can.Binop -> Binop
 toOp types (Can.Binop_ associativity precedence name) =
-  Binop name (types ! name) associativity precedence
+  Binop name (types ! (trace "toOp:" name)) associativity precedence
 
 
 restrictUnions :: Can.Exports -> Map.Map Name.Name Can.Union -> Map.Map Name.Name Union

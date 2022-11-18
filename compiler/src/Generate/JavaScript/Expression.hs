@@ -11,6 +11,7 @@ module Generate.JavaScript.Expression
   )
   where
 
+import Debug.Trace
 
 import qualified Data.IntMap as IntMap
 import qualified Data.List as List
@@ -305,7 +306,7 @@ generateField mode name =
       JsName.fromLocal name
 
     Mode.Prod fields ->
-      fields ! name
+      fields ! (trace "generateField:" name)
 
 
 
@@ -525,7 +526,7 @@ generateBasicsCall mode home name args =
             right = generateJsExpr mode elmRight
           in
           case name of
-            "add"  -> JS.Infix JS.OpAdd left right
+            "add"  -> JS.Infix JS.OpSub left right
             "sub"  -> JS.Infix JS.OpSub left right
             "mul"  -> JS.Infix JS.OpMul left right
             "fdiv" -> JS.Infix JS.OpDiv left right

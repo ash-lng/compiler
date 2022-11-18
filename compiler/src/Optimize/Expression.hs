@@ -8,6 +8,8 @@ module Optimize.Expression
   where
 
 
+import Debug.Trace
+
 import Prelude hiding (cycle)
 import Control.Monad (foldM)
 import qualified Data.Map as Map
@@ -34,7 +36,7 @@ type Cycle =
 
 optimize :: Cycle -> Can.Expr -> Names.Tracker Opt.Expr
 optimize cycle (A.At region expression) =
-  case expression of
+  case trace ("Expr: " ++ show expression) expression of
     Can.VarLocal name ->
       pure (Opt.VarLocal name)
 
@@ -45,7 +47,7 @@ optimize cycle (A.At region expression) =
         Names.registerGlobal home name
 
     Can.VarKernel home name ->
-      Names.registerKernel home (Opt.VarKernel home name)
+      Names.registerKernel home True (Opt.VarKernel home name)
 
     Can.VarForeign home name _ ->
       Names.registerGlobal home name
@@ -60,7 +62,7 @@ optimize cycle (A.At region expression) =
       Names.registerGlobal home name
 
     Can.Chr chr ->
-      Names.registerKernel Name.utils (Opt.Chr chr)
+      Names.registerKernel Name.utils False (Opt.Chr chr)
 
     Can.Str str ->
       pure (Opt.Str str)
@@ -72,7 +74,7 @@ optimize cycle (A.At region expression) =
       pure (Opt.Float float)
 
     Can.List entries ->
-      Names.registerKernel Name.list Opt.List
+      Names.registerKernel Name.list False Opt.List
         <*> traverse (optimize cycle) entries
 
     Can.Negate expr ->
@@ -162,10 +164,10 @@ optimize cycle (A.At region expression) =
         <*> traverse (optimize cycle) fields
 
     Can.Unit ->
-      Names.registerKernel Name.utils Opt.Unit
+      Names.registerKernel Name.utils False Opt.Unit
 
     Can.Tuple a b maybeC ->
-      Names.registerKernel Name.utils Opt.Tuple
+      Names.registerKernel Name.utils False Opt.Tuple
         <*> optimize cycle a
         <*> optimize cycle b
         <*> traverse (optimize cycle) maybeC

@@ -6,6 +6,7 @@ module Generate.JavaScript
   )
   where
 
+import Debug.Trace
 
 import Prelude hiding (cycle, print)
 import qualified Data.ByteString.Builder as B
@@ -22,6 +23,7 @@ import qualified AST.Optimized as Opt
 import qualified Data.Index as Index
 import qualified Elm.Kernel as K
 import qualified Elm.ModuleName as ModuleName
+import qualified Elm.Package as Pkg
 import qualified Generate.JavaScript.Builder as JS
 import qualified Generate.JavaScript.Expression as Expr
 import qualified Generate.JavaScript.Functions as Functions
@@ -176,11 +178,19 @@ prependBuilders revBuilders monolith =
 
 addGlobal :: Mode.Mode -> Graph -> State -> Opt.Global -> State
 addGlobal mode graph state@(State revKernels builders seen) global =
-  if Set.member global seen then
-    state
-  else
-    addGlobalHelp mode graph global $
-      State revKernels builders (Set.insert global seen)
+  let
+    global' = traceStack ("addGlobal:" ++ (getGlobalName global)) global
+  in
+    if Set.member global' seen then
+      state
+    else
+      addGlobalHelp mode graph global' $
+        State revKernels builders (Set.insert global' seen)
+
+
+getGlobalName :: Opt.Global -> [Char]
+getGlobalName (Opt.Global ( ModuleName.Canonical ( Pkg.Name author project ) modName ) n) =
+  Utf8.toChars author ++ "/" ++ Utf8.toChars project ++ "." ++ Name.toChars modName ++ "::" ++ Name.toChars n
 
 
 addGlobalHelp :: Mode.Mode -> Graph -> Opt.Global -> State -> State
@@ -188,8 +198,9 @@ addGlobalHelp mode graph global state =
   let
     addDeps deps someState =
       Set.foldl' (addGlobal mode graph) someState deps
+    thing = graph ! (trace ("global:" ++ (getGlobalName global)) global)
   in
-  case graph ! global of
+  case trace ("thing: " ++ show thing) thing of
     Opt.Define expr deps ->
       addStmt (addDeps deps state) (
         var global (Expr.generate mode expr)

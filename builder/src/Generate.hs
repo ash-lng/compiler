@@ -8,6 +8,9 @@ module Generate
   where
 
 
+import Debug.Trace
+
+
 import Prelude hiding (cycle, print)
 import Control.Concurrent (MVar, forkIO, newEmptyMVar, newMVar, putMVar, readMVar)
 import Control.Monad (liftM2)
@@ -136,7 +139,7 @@ loadObjects root details modules =
 
 loadObject :: FilePath -> Build.Module -> IO (ModuleName.Raw, MVar (Maybe Opt.LocalGraph))
 loadObject root modul =
-  case modul of
+  case trace ("zz loadObject:" ++ show modul) modul of
     Build.Fresh name _ graph ->
       do  mvar <- newMVar (Just graph)
           return (name, mvar)

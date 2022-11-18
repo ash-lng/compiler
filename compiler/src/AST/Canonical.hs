@@ -105,15 +105,15 @@ data Expr_
   | Unit
   | Tuple Expr Expr (Maybe Expr)
   | Shader Shader.Source Shader.Types
-
+  deriving (Show)
 
 data CaseBranch =
   CaseBranch Pattern Expr
-
+  deriving (Show)
 
 data FieldUpdate =
   FieldUpdate A.Region Expr
-
+  deriving (Show)
 
 
 -- DEFS
@@ -122,7 +122,7 @@ data FieldUpdate =
 data Def
   = Def (A.Located Name) [Pattern] Expr
   | TypedDef (A.Located Name) FreeVars [(Pattern, Type)] Expr Type
-
+  deriving (Show)
 
 
 -- DECLARATIONS
@@ -132,7 +132,7 @@ data Decls
   = Declare Def Decls
   | DeclareRec Def [Def] Decls
   | SaveTheEnvironment
-
+  deriving (Show)
 
 
 -- PATTERNS
@@ -167,7 +167,7 @@ data Pattern_
       -- CACHE _p_index to replace _p_name in PROD code gen
       -- CACHE _p_opts to allocate less in PROD code gen
       -- CACHE _p_alts and _p_numAlts for exhaustiveness checker
-
+  deriving (Show)
 
 data PatternCtorArg =
   PatternCtorArg
@@ -175,6 +175,7 @@ data PatternCtorArg =
     , _type :: Type             -- CACHE for type inference
     , _arg :: Pattern
     }
+  deriving (Show)
 
 
 
@@ -182,7 +183,7 @@ data PatternCtorArg =
 
 
 data Annotation = Forall FreeVars Type
-  deriving (Eq)
+  deriving (Eq, Show)
 
 
 type FreeVars = Map.Map Name ()
@@ -196,17 +197,17 @@ data Type
   | TUnit
   | TTuple Type Type (Maybe Type)
   | TAlias ModuleName.Canonical Name [(Name, Type)] AliasType
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data AliasType
   = Holey Type
   | Filled Type
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data FieldType = FieldType {-# UNPACK #-} !Word16 Type
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 -- NOTE: The Word16 marks the source order, but it may not be available
@@ -240,14 +241,15 @@ data Module =
     , _binops  :: Map.Map Name Binop
     , _effects :: Effects
     }
+  deriving (Show)
 
 
 data Alias = Alias [Name] Type
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Binop = Binop_ Binop.Associativity Binop.Precedence Name
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Union =
@@ -257,18 +259,18 @@ data Union =
     , _u_numAlts :: Int -- CACHE numAlts for exhaustiveness checking
     , _u_opts :: CtorOpts -- CACHE which optimizations are available
     }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data CtorOpts
   = Normal
   | Enum
   | Unbox
-  deriving (Eq, Ord)
+  deriving (Show, Eq, Ord)
 
 
 data Ctor = Ctor Name Index.ZeroBased Int [Type] -- CACHE length args
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 
@@ -278,7 +280,7 @@ data Ctor = Ctor Name Index.ZeroBased Int [Type] -- CACHE length args
 data Exports
   = ExportEverything A.Region
   | Export (Map.Map Name (A.Located Export))
-
+  deriving (Show)
 
 data Export
   = ExportValue
@@ -287,7 +289,7 @@ data Export
   | ExportUnionOpen
   | ExportUnionClosed
   | ExportPort
-
+  deriving (Show)
 
 
 -- EFFECTS
@@ -297,18 +299,18 @@ data Effects
   = NoEffects
   | Ports (Map.Map Name Port)
   | Manager A.Region A.Region A.Region Manager
-
+  deriving (Show)
 
 data Port
   = Incoming { _freeVars :: FreeVars, _payload :: Type, _func :: Type }
   | Outgoing { _freeVars :: FreeVars, _payload :: Type, _func :: Type }
-
+  deriving (Show)
 
 data Manager
   = Cmd Name
   | Sub Name
   | Fx Name Name
-
+  deriving (Show)
 
 
 -- BINARY

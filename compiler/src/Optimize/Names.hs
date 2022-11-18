@@ -15,6 +15,7 @@ module Optimize.Names
   )
   where
 
+import Debug.Trace
 
 import qualified Data.Map as Map
 import qualified Data.Name as Name
@@ -54,10 +55,10 @@ generate =
     ok (uid + 1) deps fields (Name.fromVarIndex uid)
 
 
-registerKernel :: Name.Name -> a -> Tracker a
-registerKernel home value =
+registerKernel :: Name.Name -> Bool -> a -> Tracker a
+registerKernel home isCoreMod value =
   Tracker $ \uid deps fields ok ->
-    ok uid (Set.insert (Opt.toKernelGlobal home) deps) fields value
+    ok uid (Set.insert (Opt.toKernelGlobal (trace ("registerKernel - home="++show home) home) isCoreMod) deps) fields value
 
 
 registerGlobal :: ModuleName.Canonical -> Name.Name -> Tracker Opt.Expr

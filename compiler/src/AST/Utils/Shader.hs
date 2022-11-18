@@ -26,6 +26,8 @@ import qualified Data.Name as Name
 newtype Source =
   Source BS.ByteString
 
+instance Show Source where
+  show _ = "Shader Source"
 
 
 -- TYPES
@@ -39,6 +41,10 @@ data Types =
     }
 
 
+instance Show Types where
+  show _ = "Shader Types"
+
+
 data Type
   = Int
   | Float
@@ -48,6 +54,9 @@ data Type
   | M4
   | Texture
 
+
+instance Show Type where
+  show _ = "Shader Type"
 
 
 -- TO BUILDER

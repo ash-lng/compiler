@@ -13,6 +13,9 @@ module Elm.Compiler.Type.Extract
   where
 
 
+import Debug.Trace
+
+
 import Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -173,7 +176,7 @@ extractTransitive types (Deps seenAliases seenUnions) (Deps nextAliases nextUnio
 extractAlias :: Types -> Opt.Global -> Extractor T.Alias
 extractAlias (Types dict) (Opt.Global home name) =
   let
-    (Can.Alias args aliasType) = _alias_info (dict ! home) ! name
+    (Can.Alias args aliasType) = _alias_info (dict ! (trace ("extractAlias0:") home)) ! (trace ("extractAlias1:") name)
   in
   T.Alias (toPublicName home name) args <$> extract aliasType
 
@@ -185,7 +188,7 @@ extractUnion (Types dict) (Opt.Global home name) =
     else
       let
         pname = toPublicName home name
-        (Can.Union vars ctors _ _) = _union_info (dict ! home) ! name
+        (Can.Union vars ctors _ _) = _union_info (dict ! (trace ("extractUnion0:") home)) ! (trace ("extractUnion1:") name)
       in
       T.Union pname vars <$> traverse extractCtor ctors
 

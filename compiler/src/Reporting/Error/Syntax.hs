@@ -75,6 +75,9 @@ data Error
   | ParseError Module
 
 
+instance Show Error where
+  show e = "Error[TODO]"
+
 
 -- MODULE
 

@@ -7,6 +7,7 @@ module Canonicalize.Environment.Foreign
   where
 
 
+import Debug.Trace
 import Control.Monad (foldM)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -34,7 +35,9 @@ type Result i w a =
 
 createInitialEnv :: ModuleName.Canonical -> Map.Map ModuleName.Raw I.Interface -> [Src.Import] -> Result i w Env.Env
 createInitialEnv home ifaces imports =
-  do  (State vs ts cs bs qvs qts qcs) <- foldM (addImport ifaces) emptyState (toSafeImports home imports)
+  do  
+      x <- pure (traceShow (map (Name.toChars . Src.getImportName) imports) imports)
+      (State vs ts cs bs qvs qts qcs) <- foldM (addImport ifaces) emptyState (toSafeImports home x)
       Result.ok (Env.Env home (Map.map infoToVar vs) ts cs bs qvs qts qcs)
 
 
@@ -77,9 +80,7 @@ emptyTypes =
 
 toSafeImports :: ModuleName.Canonical -> [Src.Import] -> [Src.Import]
 toSafeImports (ModuleName.Canonical pkg _) imports =
-  if Pkg.isKernel pkg
-  then filter isNormal imports
-  else imports
+  filter isNormal imports
 
 
 isNormal :: Src.Import -> Bool
@@ -100,7 +101,8 @@ isNormal (Src.Import (A.At _ name) maybeAlias _) =
 addImport :: Map.Map ModuleName.Raw I.Interface -> State -> Src.Import -> Result i w State
 addImport ifaces (State vs ts cs bs qvs qts qcs) (Src.Import (A.At _ name) maybeAlias exposing) =
   let
-    (I.Interface pkg defs unions aliases binops) = ifaces ! name
+    x = traceShow ("ifaces", (map Name.toChars (Map.keys ifaces))) name
+    (I.Interface pkg defs unions aliases binops) = ifaces ! (trace ("addImport:"++Name.toChars x) x)
     !prefix = maybe name id maybeAlias
     !home = ModuleName.Canonical pkg name
 

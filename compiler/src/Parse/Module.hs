@@ -45,6 +45,7 @@ fromByteString projectType source =
 data ProjectType
   = Package Pkg.Name
   | Application
+  deriving (Show)
 
 
 isCore :: ProjectType -> Bool
@@ -56,9 +57,7 @@ isCore projectType =
 
 isKernel :: ProjectType -> Bool
 isKernel projectType =
-  case projectType of
-    Package pkg -> Pkg.isKernel pkg
-    Application -> False
+  True
 
 
 
