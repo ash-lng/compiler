@@ -14,6 +14,9 @@ module Elm.Details
   where
 
 
+import Debug.Trace
+
+
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, newMVar, putMVar, readMVar, takeMVar)
 import Control.Monad (liftM, liftM2, liftM3)
@@ -499,7 +502,7 @@ addLocalGraph name status graph =
   case status of
     RLocal _ objs _ -> Opt.addLocalGraph objs graph
     RForeign _      -> graph
-    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) cs graph
+    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) (Name.isCoreMod name) cs graph
     RKernelForeign  -> graph
 
 
@@ -566,13 +569,15 @@ data Status
   | SForeign I.Interface
   | SKernelLocal [Kernel.Chunk]
   | SKernelForeign
+  deriving (Show)
 
 
 crawlModule :: Map.Map ModuleName.Raw ForeignInterface -> MVar StatusDict -> Pkg.Name -> FilePath -> DocsStatus -> ModuleName.Raw -> IO (Maybe Status)
 crawlModule foreignDeps mvar pkg src docsStatus name =
   do  let path = src </> ModuleName.toFilePath name <.> "elm"
       exists <- File.exists path
-      case Map.lookup name foreignDeps of
+      let name_ = traceShow ("crawlModule", name, path, exists, Pkg.isKernel pkg, Name.isKernel name) name
+      case Map.lookup name_ foreignDeps of
         Just ForeignAmbiguous ->
           return Nothing
 
@@ -618,7 +623,8 @@ crawlImports foreignDeps mvar pkg src imports =
 crawlKernel :: Map.Map ModuleName.Raw ForeignInterface -> MVar StatusDict -> Pkg.Name -> FilePath -> ModuleName.Raw -> IO (Maybe Status)
 crawlKernel foreignDeps mvar pkg src name =
   do  let path = src </> ModuleName.toFilePath name <.> "js"
-      exists <- File.exists path
+      let path_ = trace ("zzpath="++path) path
+      exists <- File.exists path_
       if exists
         then
           do  bytes <- File.readUtf8 path
@@ -653,7 +659,7 @@ data Result
 
 compile :: Pkg.Name -> MVar (Map.Map ModuleName.Raw (MVar (Maybe Result))) -> Status -> IO (Maybe Result)
 compile pkg mvar status =
-  case status of
+  case (traceShow ("compile", pkg, status) status) of
     SLocal docsStatus deps modul ->
       do  resultsDict <- readMVar mvar
           maybeResults <- traverse readMVar (Map.intersection resultsDict deps)

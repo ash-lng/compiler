@@ -16,14 +16,14 @@ import Data.Binary
 
 
 newtype Precedence = Precedence Int
-  deriving (Eq, Ord)
+  deriving (Show, Eq, Ord)
 
 
 data Associativity
   = Left
   | Non
   | Right
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 

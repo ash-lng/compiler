@@ -14,6 +14,7 @@ module Data.Name
   , hasDot
   , splitDots
   , isKernel
+  , isCoreMod
   , isNumberType
   , isComparableType
   , isAppendableType
@@ -65,6 +66,9 @@ import qualified Elm.String as ES
 
 type Name =
   Utf8.Utf8 ELM_NAME
+
+instance Show Name where
+  show = Utf8.toChars
 
 
 data ELM_NAME
@@ -159,7 +163,10 @@ getKernel name@(Utf8.Utf8 ba#) =
 
 
 isKernel :: Name -> Bool
-isKernel x = (Utf8.startsWith prefix_kernel x) || (Utf8.startsWith local_kernel x)
+isKernel x = (Utf8.startsWith prefix_kernel x) || isCoreMod x
+
+isCoreMod :: Name -> Bool
+isCoreMod x = Utf8.startsWith local_kernel x
 
 isNumberType :: Name -> Bool
 isNumberType = Utf8.startsWith prefix_number

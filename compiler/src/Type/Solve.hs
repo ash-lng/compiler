@@ -6,6 +6,8 @@ module Type.Solve
   where
 
 
+import Debug.Trace
+
 import Control.Monad
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict ((!))
@@ -97,7 +99,7 @@ solve env rank pools state constraint =
                       Error.typeReplace expectation expectedType
 
     CLocal region name expectation ->
-      do  actual <- makeCopy rank pools (env ! name)
+      do  actual <- makeCopy rank pools (env ! (trace ("CLocal:"++Name.toChars name) name))
           expected <- expectedToVariable rank pools expectation
           answer <- Unify.unify actual expected
           case answer of
@@ -456,7 +458,7 @@ typeToVar rank pools aliasDict tipe =
           register rank pools (Alias home name argVars aliasVar)
 
     PlaceHolder name ->
-      return (aliasDict ! name)
+      return (aliasDict ! (trace ("PlaceHolder:"++Name.toChars name) name))
 
     RecordN fields ext ->
       do  fieldVars <- traverse go fields
@@ -527,7 +529,7 @@ srcTypeToVar rank pools flexVars srcType =
           register rank pools (Structure (Fun1 argVar resultVar))
 
     Can.TVar name ->
-      return (flexVars ! name)
+      return (flexVars ! (trace ("Can.TVar"++Name.toChars name) name))
 
     Can.TType home name args ->
       do  argVars <- traverse go args
@@ -538,7 +540,7 @@ srcTypeToVar rank pools flexVars srcType =
           extVar <-
             case maybeExt of
               Nothing -> register rank pools emptyRecord1
-              Just ext -> return (flexVars ! ext)
+              Just ext -> return (flexVars ! (trace ("Can.TRecord:") ext))
           register rank pools (Structure (Record1 fieldVars extVar))
 
     Can.TUnit ->

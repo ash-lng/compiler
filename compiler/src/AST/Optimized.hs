@@ -21,6 +21,9 @@ module AST.Optimized
   where
 
 
+import Debug.Trace
+
+
 import Control.Monad (liftM, liftM2, liftM3, liftM4)
 import Data.Binary (Binary, get, put, getWord8, putWord8)
 import qualified Data.Map as Map
@@ -72,9 +75,10 @@ data Expr
   | Unit
   | Tuple Expr Expr (Maybe Expr)
   | Shader Shader.Source (Set.Set Name) (Set.Set Name)
-
+  deriving (Show)
 
 data Global = Global ModuleName.Canonical Name
+  deriving (Show)
 
 
 
@@ -84,18 +88,18 @@ data Global = Global ModuleName.Canonical Name
 data Def
   = Def Name Expr
   | TailDef Name [Name] Expr
-
+  deriving (Show)
 
 data Destructor =
   Destructor Name Path
-
+  deriving (Show)
 
 data Path
   = Index Index.ZeroBased Path
   | Field Name Path
   | Unbox Path
   | Root Name
-
+  deriving (Show)
 
 
 -- BRANCHING
@@ -113,13 +117,13 @@ data Decider a
       , _tests :: [(DT.Test, Decider a)]
       , _fallback :: Decider a
       }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Choice
   = Inline Expr
   | Jump Int
-
+  deriving (Show)
 
 
 -- OBJECT GRAPH
@@ -160,10 +164,11 @@ data Node
   | Kernel [K.Chunk] (Set.Set Global)
   | PortIncoming Expr (Set.Set Global)
   | PortOutgoing Expr (Set.Set Global)
+  deriving (Show)
 
 
 data EffectsType = Cmd | Sub | Fx
-
+  deriving (Show)
 
 
 -- GRAPHS
@@ -191,11 +196,11 @@ addLocalGraph (LocalGraph _ nodes1 fields1) (GlobalGraph nodes2 fields2) =
     }
 
 
-addKernel :: Name.Name -> [K.Chunk] -> GlobalGraph -> GlobalGraph
-addKernel shortName chunks (GlobalGraph nodes fields) =
+addKernel :: Name.Name -> Bool -> [K.Chunk] -> GlobalGraph -> GlobalGraph
+addKernel shortName isCoreMod chunks (GlobalGraph nodes fields) =
   let
-    global = toKernelGlobal shortName
-    node = Kernel chunks (foldr addKernelDep Set.empty chunks)
+    global = toKernelGlobal shortName isCoreMod
+    node = Kernel chunks (foldr (addKernelDep isCoreMod) Set.empty chunks)
   in
   GlobalGraph
     { _g_nodes = Map.insert global node nodes
@@ -203,12 +208,12 @@ addKernel shortName chunks (GlobalGraph nodes fields) =
     }
 
 
-addKernelDep :: K.Chunk -> Set.Set Global -> Set.Set Global
-addKernelDep chunk deps =
+addKernelDep :: Bool -> K.Chunk -> Set.Set Global -> Set.Set Global
+addKernelDep isCoreMod chunk deps =
   case chunk of
     K.JS _              -> deps
     K.ElmVar home name  -> Set.insert (Global home name) deps
-    K.JsVar shortName _ -> Set.insert (toKernelGlobal shortName) deps
+    K.JsVar shortName _ -> Set.insert (toKernelGlobal shortName isCoreMod) deps
     K.ElmField _        -> deps
     K.JsField _         -> deps
     K.JsEnum _          -> deps
@@ -216,10 +221,12 @@ addKernelDep chunk deps =
     K.Prod              -> deps
 
 
-toKernelGlobal :: Name.Name -> Global
-toKernelGlobal shortName =
-  Global (ModuleName.Canonical Pkg.kernel shortName) Name.dollar
-
+toKernelGlobal :: Name.Name -> Bool -> Global
+toKernelGlobal shortName isCoreMod =
+  if traceShow ("toKernelGlobal", shortName, isCoreMod) isCoreMod then
+    Global (ModuleName.Canonical Pkg.dummyName shortName) Name.dollar
+  else
+    Global (ModuleName.Canonical Pkg.kernel shortName) Name.dollar
 
 
 -- INSTANCES

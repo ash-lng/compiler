@@ -16,6 +16,8 @@ module Elm.Interface
   )
   where
 
+import Debug.Trace
+
 
 import Control.Monad (liftM, liftM3, liftM4, liftM5)
 import Data.Binary
@@ -95,7 +97,7 @@ restrict exports dict =
 
 toOp :: Map.Map Name.Name Can.Annotation -> Can.Binop -> Binop
 toOp types (Can.Binop_ associativity precedence name) =
-  Binop name (types ! name) associativity precedence
+  Binop name (types ! (trace "toOp:" name)) associativity precedence
 
 
 restrictUnions :: Can.Exports -> Map.Map Name.Name Can.Union -> Map.Map Name.Name Union

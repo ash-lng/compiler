@@ -11,6 +11,7 @@ module Generate.JavaScript.Expression
   )
   where
 
+import Debug.Trace
 
 import qualified Data.IntMap as IntMap
 import qualified Data.List as List
@@ -305,7 +306,7 @@ generateField mode name =
       JsName.fromLocal name
 
     Mode.Prod fields ->
-      fields ! name
+      fields ! (trace "generateField:" name)
 
 
 

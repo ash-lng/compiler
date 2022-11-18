@@ -15,6 +15,9 @@ module Build
   where
 
 
+import Debug.Trace
+
+
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
 import Control.Monad (filterM, mapM_, sequence_)
@@ -303,15 +306,20 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
 
             Nothing ->
               if Name.isKernel name && Parse.isKernel projectType then
-                do  exists <- File.exists ("src" </> ModuleName.toFilePath name <.> "js")
-                    return $ if exists then SKernel else SBadImport Import.NotFound
+                do  let path = "src" </> ModuleName.toFilePath name <.> "js"
+                    let path_ = trace ("path="++path) path
+                    exists <- File.exists path_
+                    let exists_ = trace ("exists="++show exists) exists
+                    return $ if exists_ then SKernel else SBadImport Import.NotFound
               else
                 return $ SBadImport Import.NotFound
 
 
 crawlFile :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> FilePath -> File.Time -> Details.BuildID -> IO Status
 crawlFile env@(Env _ root projectType _ buildID _ _) mvar docsNeed expectedName path time lastChange =
-  do  source <- File.readUtf8 (root </> path)
+  do  let fullPath = (root </> path)
+      let fullPath_ = trace ("fullPath=" <> fullPath) fullPath
+      source <- File.readUtf8 fullPath_
 
       case Parse.fromByteString projectType source of
         Left err ->

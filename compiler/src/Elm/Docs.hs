@@ -16,6 +16,8 @@ module Elm.Docs
   )
   where
 
+import Debug.Trace
+
 
 import qualified Data.Coerce as Coerce
 import qualified Data.List as List
@@ -497,26 +499,26 @@ checkExport info name (A.At region export) =
             m { _values = Map.insert name (Value comment tipe) (_values m) }
 
     Can.ExportBinop ->
-      do  let (Can.Binop_ assoc prec realName) = _iBinops info ! name
+      do  let (Can.Binop_ assoc prec realName) = _iBinops info ! (trace ("Can.ExportBinop") name)
           tipe <- getType realName info
           comment <- getComment region realName info
           Result.ok $ \m ->
             m { _binops = Map.insert name (Binop comment tipe assoc prec) (_binops m) }
 
     Can.ExportAlias ->
-      do  let (Can.Alias tvars tipe) = _iAliases info ! name
+      do  let (Can.Alias tvars tipe) = _iAliases info ! (trace ("Can.ExportAlias") name)
           comment <- getComment region name info
           Result.ok $ \m ->
             m { _aliases = Map.insert name (Alias comment tvars (Extract.fromType tipe)) (_aliases m) }
 
     Can.ExportUnionOpen ->
-      do  let (Can.Union tvars ctors _ _) = _iUnions info ! name
+      do  let (Can.Union tvars ctors _ _) = _iUnions info ! (trace ("Can.ExportUnionOpen") name)
           comment <- getComment region name info
           Result.ok $ \m ->
             m { _unions = Map.insert name (Union comment tvars (map dector ctors)) (_unions m) }
 
     Can.ExportUnionClosed ->
-      do  let (Can.Union tvars _ _ _) = _iUnions info ! name
+      do  let (Can.Union tvars _ _ _) = _iUnions info ! (trace ("Can.ExportUnionClosed") name)
           comment <- getComment region name info
           Result.ok $ \m ->
             m { _unions = Map.insert name (Union comment tvars []) (_unions m) }
@@ -540,7 +542,7 @@ getComment region name info =
 
 getType :: Name.Name -> Info -> Result.Result i w E.DefProblem Type.Type
 getType name info =
-  case _iValues info ! name of
+  case _iValues info ! (trace ("getType:") name) of
     Left region ->
       Result.throw (E.NoAnnotation name region)
 

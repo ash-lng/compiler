@@ -44,7 +44,7 @@ data Chunk
   | JsEnum Int
   | Debug
   | Prod
-
+  deriving (Show)
 
 
 -- COUNT FIELDS

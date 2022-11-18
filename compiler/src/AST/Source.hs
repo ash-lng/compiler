@@ -138,6 +138,10 @@ data Module =
     }
 
 
+instance Show Module where
+  show mod = "Module [" ++ (getName mod) ++ "]"
+
+
 getName :: Module -> Name
 getName (Module maybeName _ _ _ _ _ _ _ _) =
   case maybeName of
@@ -183,11 +187,13 @@ data Manager
 data Docs
   = NoDocs A.Region
   | YesDocs Comment [(Name, Comment)]
-
+  deriving (Show)
 
 newtype Comment =
   Comment P.Snippet
 
+instance Show Comment where
+  show _ = "A comment"
 
 
 -- EXPOSING
