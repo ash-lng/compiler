@@ -109,9 +109,14 @@ data Local =
     , _lastCompile :: BuildID
     }
 
+instance Show Local where 
+  show (Local path _ deps main lastChange lastCompile) =
+    "Local " ++ show path ++ show deps ++ show main ++ show lastChange ++ show lastCompile
+
 
 data Foreign =
   Foreign Pkg.Name [Pkg.Name]
+  deriving (Show)
 
 
 data Extras
@@ -705,6 +710,7 @@ getInterface result =
 data DocsStatus
   = DocsNeeded
   | DocsNotNeeded
+  deriving (Show)
 
 
 getDocsStatus :: Stuff.PackageCache -> Pkg.Name -> V.Version -> IO DocsStatus

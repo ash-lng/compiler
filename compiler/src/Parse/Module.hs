@@ -45,6 +45,7 @@ fromByteString projectType source =
 data ProjectType
   = Package Pkg.Name
   | Application
+  deriving (Show)
 
 
 isCore :: ProjectType -> Bool

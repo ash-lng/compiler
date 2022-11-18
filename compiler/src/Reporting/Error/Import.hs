@@ -37,6 +37,7 @@ data Problem
   | Ambiguous FilePath [FilePath] Pkg.Name [Pkg.Name]
   | AmbiguousLocal FilePath FilePath [FilePath]
   | AmbiguousForeign Pkg.Name Pkg.Name [Pkg.Name]
+  deriving (Show)
 
 
 

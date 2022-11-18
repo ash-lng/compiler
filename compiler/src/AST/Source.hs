@@ -139,7 +139,7 @@ data Module =
 
 
 instance Show Module where
-  show mod = "Module [" ++ (getName mod) ++ "]"
+  show mod = "Module [" ++ (Name.toChars (getName mod)) ++ "]"
 
 
 getName :: Module -> Name

@@ -44,20 +44,20 @@ data Interface =
     , _aliases :: Map.Map Name.Name Alias
     , _binops  :: Map.Map Name.Name Binop
     }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Union
   = OpenUnion Can.Union
   | ClosedUnion Can.Union
   | PrivateUnion Can.Union
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Alias
   = PublicAlias Can.Alias
   | PrivateAlias Can.Alias
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 data Binop =
@@ -67,7 +67,7 @@ data Binop =
     , _op_associativity :: Binop.Associativity
     , _op_precedence :: Binop.Precedence
     }
-  deriving (Eq)
+  deriving (Show, Eq)
 
 
 

@@ -184,6 +184,16 @@ data Module
   | Cached ModuleName.Raw Bool (MVar CachedInterface)
 
 
+instance Show Module where
+  show mod =
+    case mod of
+      Fresh name interface localGraph ->
+        "Fresh " ++ show name ++ " " ++ show interface ++ " localGraph"
+
+      Cached name b _ ->
+        "Cached " ++ show name ++ " " ++ show b
+
+
 type Dependencies =
   Map.Map ModuleName.Canonical I.DependencyInterface
 
@@ -246,13 +256,21 @@ type StatusDict =
   Map.Map ModuleName.Raw (MVar Status)
 
 
+newtype FileTime = FileTime File.Time
+
+
+instance Show FileTime where
+  show ft = "FileTime"
+
+
 data Status
   = SCached Details.Local
   | SChanged Details.Local B.ByteString Src.Module DocsNeed
   | SBadImport Import.Problem
-  | SBadSyntax FilePath File.Time B.ByteString Syntax.Error
+  | SBadSyntax FilePath FileTime B.ByteString Syntax.Error
   | SForeign Pkg.Name
   | SKernel
+  deriving (Show)
 
 
 crawlDeps :: Env -> MVar StatusDict -> [ModuleName.Raw] -> a -> IO a
@@ -323,12 +341,12 @@ crawlFile env@(Env _ root projectType _ buildID _ _) mvar docsNeed expectedName 
 
       case Parse.fromByteString projectType source of
         Left err ->
-          return $ SBadSyntax path time source err
+          return $ SBadSyntax path (FileTime time) source err
 
         Right modul@(Src.Module maybeActualName _ _ imports values _ _ _ _) ->
           case maybeActualName of
             Nothing ->
-              return $ SBadSyntax path time source (Syntax.ModuleNameUnspecified expectedName)
+              return $ SBadSyntax path (FileTime time) source (Syntax.ModuleNameUnspecified expectedName)
 
             Just name@(A.At _ actualName) ->
               if expectedName == actualName then
@@ -338,7 +356,7 @@ crawlFile env@(Env _ root projectType _ buildID _ _) mvar docsNeed expectedName 
                 in
                 crawlDeps env mvar deps (SChanged local source modul docsNeed)
               else
-                return $ SBadSyntax path time source (Syntax.ModuleNameMismatch expectedName name)
+                return $ SBadSyntax path (FileTime time) source (Syntax.ModuleNameMismatch expectedName name)
 
 
 isMain :: A.Located Src.Value -> Bool
@@ -369,11 +387,12 @@ data CachedInterface
   = Unneeded
   | Loaded I.Interface
   | Corrupted
+  deriving (Show)
 
 
 checkModule :: Env -> Dependencies -> MVar ResultDict -> ModuleName.Raw -> Status -> IO Result
 checkModule env@(Env _ root projectType _ _ _ _) foreigns resultsMVar name status =
-  case status of
+  case traceShow ("checkModule", projectType, name, status) status of
     SCached local@(Details.Local path time deps hasMain lastChange lastCompile) ->
       do  results <- readMVar resultsMVar
           depsStatus <- checkDeps root results deps lastCompile
@@ -426,7 +445,7 @@ checkModule env@(Env _ root projectType _ _ _ _) foreigns resultsMVar name statu
     SBadImport importProblem ->
       return (RNotFound importProblem)
 
-    SBadSyntax path time source err ->
+    SBadSyntax path (FileTime time) source err ->
       return $ RProblem $ Error.Module name path time source $
         Error.BadSyntax err
 
@@ -830,6 +849,9 @@ data DocsGoal a where
 newtype DocsNeed =
   DocsNeed { needsDocs :: Bool }
 
+
+instance Show DocsNeed where
+  show _ = "DocsNeed"
 
 toDocsNeed :: DocsGoal a -> DocsNeed
 toDocsNeed goal =

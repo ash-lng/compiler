@@ -9,6 +9,9 @@ module Elm.Kernel
   where
 
 
+import Debug.Trace
+
+
 import Control.Monad (liftM, liftM2)
 import Data.Binary (Binary, get, put, getWord8, putWord8)
 import qualified Data.ByteString.Internal as B
@@ -82,7 +85,7 @@ type Foreigns =
 
 fromByteString :: Pkg.Name -> Foreigns -> B.ByteString -> Maybe Content
 fromByteString pkg foreigns bytes =
-  case P.fromByteString (parser pkg foreigns) toError bytes of
+  case P.fromByteString (parser pkg foreigns) toError (trace "zzz parsing Kernel JS" bytes) of
     Right content ->
       Just content
 
