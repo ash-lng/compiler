@@ -43,11 +43,12 @@ type Annotations =
 
 optimize :: Annotations -> Can.Module -> Result i [W.Warning] Opt.LocalGraph
 optimize annotations (Can.Module home _ _ decls unions aliases _ effects) =
-  addDecls home annotations decls $
-    addEffects home effects $
-      addUnions home unions $
-        addAliases home aliases $
-          Opt.LocalGraph Nothing Map.empty Map.empty
+  addDecls (trace ("optimizzzzz" ++ show (annotations, home, decls, unions, aliases, effects)) home) annotations decls $
+    -- addKernel home chunks $
+      addEffects home effects $
+        addUnions home unions $
+          addAliases home aliases $
+            Opt.LocalGraph Nothing Map.empty Map.empty
 
 
 
@@ -170,6 +171,16 @@ addPort home name port_ graph =
       addToGraph (Opt.Global home name) node fields graph
 
 
+-- CORE MODULES
+
+-- addKernel :: ModuleName.Canonical -> Opt.LocalGraph -> [K.Chunk] -> Opt.LocalGraph
+-- addKernel home@(pkg shortName) chunks graph@(Opt.LocalGraph main nodes fields) =
+--   if Name.isCoreMod pkg then
+--       global = Opt.toKernelGlobal (traceShow ("addKernel13388", home) shortName) True
+--       node = Kernel chunks (foldr (Opt.addKernelDep True) Set.empty chunks)
+--       addToGraph (Opt.Global home global) node (K.countFields chunks) graph
+--     else
+--       graph
 
 -- HELPER
 
@@ -225,6 +236,8 @@ defToName def =
   case def of
     Can.Def (A.At _ name) _ _          -> name
     Can.TypedDef (A.At _ name) _ _ _ _ -> name
+
+
 
 
 

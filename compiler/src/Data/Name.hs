@@ -186,7 +186,7 @@ prefix_kernel = fromChars "Elm.Kernel."
 
 {-# NOINLINE local_kernel #-}
 local_kernel :: Name
-local_kernel = fromChars "AshCoreMod."
+local_kernel = fromChars "AshCoreMod"
 
 {-# NOINLINE prefix_number #-}
 prefix_number :: Name

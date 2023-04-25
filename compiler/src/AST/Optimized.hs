@@ -134,6 +134,7 @@ data GlobalGraph =
     { _g_nodes :: Map.Map Global Node
     , _g_fields :: Map.Map Name Int
     }
+  deriving (Show)
 
 
 data LocalGraph =
@@ -142,6 +143,7 @@ data LocalGraph =
     , _l_nodes :: Map.Map Global Node  -- PERF profile switching Global to Name
     , _l_fields :: Map.Map Name Int
     }
+  deriving (Show)
 
 
 data Main
@@ -150,6 +152,7 @@ data Main
       { _message :: Can.Type
       , _decoder :: Expr
       }
+  deriving (Show)
 
 
 data Node
@@ -199,7 +202,7 @@ addLocalGraph (LocalGraph _ nodes1 fields1) (GlobalGraph nodes2 fields2) =
 addKernel :: Name.Name -> Bool -> [K.Chunk] -> GlobalGraph -> GlobalGraph
 addKernel shortName isCoreMod chunks (GlobalGraph nodes fields) =
   let
-    global = toKernelGlobal shortName isCoreMod
+    global = toKernelGlobal (traceShow ("addKernel1338", shortName) shortName) isCoreMod
     node = Kernel chunks (foldr (addKernelDep isCoreMod) Set.empty chunks)
   in
   GlobalGraph
@@ -213,7 +216,7 @@ addKernelDep isCoreMod chunk deps =
   case chunk of
     K.JS _              -> deps
     K.ElmVar home name  -> Set.insert (Global home name) deps
-    K.JsVar shortName _ -> Set.insert (toKernelGlobal shortName isCoreMod) deps
+    K.JsVar shortName _ -> Set.insert (toKernelGlobal shortName False) deps
     K.ElmField _        -> deps
     K.JsField _         -> deps
     K.JsEnum _          -> deps
@@ -223,7 +226,7 @@ addKernelDep isCoreMod chunk deps =
 
 toKernelGlobal :: Name.Name -> Bool -> Global
 toKernelGlobal shortName isCoreMod =
-  if traceShow ("toKernelGlobal", shortName, isCoreMod) isCoreMod then
+  if traceStack (show ("toKernelGlobal", shortName, isCoreMod)) isCoreMod then
     Global (ModuleName.Canonical Pkg.dummyName shortName) Name.dollar
   else
     Global (ModuleName.Canonical Pkg.kernel shortName) Name.dollar

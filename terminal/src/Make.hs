@@ -174,7 +174,7 @@ buildPaths style root details paths =
 
 
 getMains :: Build.Artifacts -> [ModuleName.Raw]
-getMains (Build.Artifacts _ _ roots modules) =
+getMains (Build.Artifacts _ _ roots modules _) =
   Maybe.mapMaybe (getMain modules) (NE.toList roots)
 
 
@@ -207,7 +207,7 @@ isMain targetName modul =
 
 
 hasOneMain :: Build.Artifacts -> Task ModuleName.Raw
-hasOneMain (Build.Artifacts _ _ roots modules) =
+hasOneMain (Build.Artifacts _ _ roots modules _) =
   case roots of
     NE.List root [] -> Task.mio Exit.MakeNoMain (return $ getMain modules root)
     NE.List _ (_:_) -> Task.throw Exit.MakeMultipleFilesIntoHtml
@@ -218,7 +218,7 @@ hasOneMain (Build.Artifacts _ _ roots modules) =
 
 
 getNoMains :: Build.Artifacts -> [ModuleName.Raw]
-getNoMains (Build.Artifacts _ _ roots modules) =
+getNoMains (Build.Artifacts _ _ roots modules _) =
   Maybe.mapMaybe (getNoMain modules) (NE.toList roots)
 
 

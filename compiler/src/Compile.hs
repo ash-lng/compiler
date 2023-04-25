@@ -82,6 +82,16 @@ nitpick canonical =
       Left (E.BadPatterns errors)
 
 
+-- loadKernel :: Src.Module -> Map.Map Name.Name Can.Annotation -> Can.Module -> Either E.Error Opt.LocalGraph
+-- optimize modul annotations canonical =
+--   case snd $ R.run $ Optimize.optimize annotations canonical of
+--     Right localGraph ->
+--       Right localGraph
+
+--     Left errors ->
+--       Left (E.BadMains (Localizer.fromModule modul) errors)
+
+
 optimize :: Src.Module -> Map.Map Name.Name Can.Annotation -> Can.Module -> Either E.Error Opt.LocalGraph
 optimize modul annotations canonical =
   case snd $ R.run $ Optimize.optimize annotations canonical of

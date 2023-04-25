@@ -26,7 +26,6 @@ import qualified Optimize.Names as Names
 import qualified Reporting.Annotation as A
 
 
-
 -- OPTIMIZE
 
 
@@ -47,7 +46,7 @@ optimize cycle (A.At region expression) =
         Names.registerGlobal home name
 
     Can.VarKernel home name ->
-      Names.registerKernel home True (Opt.VarKernel home name)
+      Names.registerKernel home (Name.isCoreMod home) (Opt.VarKernel home name)
 
     Can.VarForeign home name _ ->
       Names.registerGlobal home name

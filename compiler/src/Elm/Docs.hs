@@ -68,6 +68,10 @@ data Module =
     , _binops :: Map.Map Name.Name Binop
     }
 
+instance Show Module where
+  show (Module name _ unions aliases values binops) =
+    "Module " ++ show name ++ show unions ++ show aliases ++ show values ++ show binops
+
 type Comment = Json.String
 
 data Alias = Alias Comment [Name.Name] Type.Type
@@ -75,6 +79,17 @@ data Union = Union Comment [Name.Name] [(Name.Name, [Type.Type])]
 data Value = Value Comment Type.Type
 data Binop = Binop Comment Type.Type Binop.Associativity Binop.Precedence
 
+instance Show Alias where
+  show _ = "Alias"
+
+instance Show Union where
+  show _ = "Union"
+
+instance Show Value where
+  show _ = "Value"
+
+instance Show Binop where
+  show _ = "Binop"
 
 
 -- JSON
