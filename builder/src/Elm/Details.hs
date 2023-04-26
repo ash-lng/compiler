@@ -499,7 +499,7 @@ addLocalGraph name status graph =
   case status of
     RLocal _ objs _ -> Opt.addLocalGraph objs graph
     RForeign _      -> graph
-    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) cs graph
+    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) (Name.isCoreMod name) cs graph
     RKernelForeign  -> graph
 
 

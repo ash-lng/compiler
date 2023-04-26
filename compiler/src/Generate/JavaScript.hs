@@ -22,6 +22,7 @@ import qualified AST.Optimized as Opt
 import qualified Data.Index as Index
 import qualified Elm.Kernel as K
 import qualified Elm.ModuleName as ModuleName
+import qualified Elm.Package as Pkg
 import qualified Generate.JavaScript.Builder as JS
 import qualified Generate.JavaScript.Expression as Expr
 import qualified Generate.JavaScript.Functions as Functions

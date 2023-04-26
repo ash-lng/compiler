@@ -257,7 +257,7 @@ addDefHelp region annotations home name args body graph@(Opt.LocalGraph _ nodes 
     case Type.deepDealias tipe of
       Can.TType hm nm [_] | hm == ModuleName.virtualDom && nm == Name.node ->
           Result.ok $ addMain $ Names.run $
-            Names.registerKernel Name.virtualDom Opt.Static
+            Names.registerKernel Name.virtualDom False Opt.Static
 
       Can.TType hm nm [flags, _, message] | hm == ModuleName.platform && nm == Name.program ->
           case Effects.checkPayload flags of
