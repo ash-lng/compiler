@@ -5,6 +5,7 @@ module Optimize.Module
   )
   where
 
+import Debug.Trace
 
 import Prelude hiding (cycle)
 import Control.Monad (foldM)
@@ -42,11 +43,12 @@ type Annotations =
 
 optimize :: Annotations -> Can.Module -> Result i [W.Warning] Opt.LocalGraph
 optimize annotations (Can.Module home _ _ decls unions aliases _ effects) =
-  addDecls home annotations decls $
-    addEffects home effects $
-      addUnions home unions $
-        addAliases home aliases $
-          Opt.LocalGraph Nothing Map.empty Map.empty
+  addDecls (trace ("optimizzzzz" ++ show (annotations, home, decls, unions, aliases, effects)) home) annotations decls $
+    -- addKernel home chunks $
+      addEffects home effects $
+        addUnions home unions $
+          addAliases home aliases $
+            Opt.LocalGraph Nothing Map.empty Map.empty
 
 
 
@@ -169,6 +171,16 @@ addPort home name port_ graph =
       addToGraph (Opt.Global home name) node fields graph
 
 
+-- CORE MODULES
+
+-- addKernel :: ModuleName.Canonical -> Opt.LocalGraph -> [K.Chunk] -> Opt.LocalGraph
+-- addKernel home@(pkg shortName) chunks graph@(Opt.LocalGraph main nodes fields) =
+--   if Name.isCoreMod pkg then
+--       global = Opt.toKernelGlobal (traceShow ("addKernel13388", home) shortName) True
+--       node = Kernel chunks (foldr (Opt.addKernelDep True) Set.empty chunks)
+--       addToGraph (Opt.Global home global) node (K.countFields chunks) graph
+--     else
+--       graph
 
 -- HELPER
 
@@ -227,6 +239,8 @@ defToName def =
 
 
 
+
+
 -- ADD DEFS
 
 
@@ -234,7 +248,7 @@ addDef :: ModuleName.Canonical -> Annotations -> Can.Def -> Opt.LocalGraph -> Re
 addDef home annotations def graph =
   case def of
     Can.Def (A.At region name) args body ->
-      do  let (Can.Forall _ tipe) = annotations ! name
+      do  let (Can.Forall _ tipe) = annotations ! (trace ("addDef:"++Name.toChars name) name)
           Result.warn $ W.MissingTypeAnnotation region name tipe
           addDefHelp region annotations home name args body graph
 
@@ -248,7 +262,7 @@ addDefHelp region annotations home name args body graph@(Opt.LocalGraph _ nodes 
     Result.ok (addDefNode home name args body Set.empty graph)
   else
     let
-      (Can.Forall _ tipe) = annotations ! name
+      (Can.Forall _ tipe) = annotations ! (trace ("addDefHelp:"++Name.toChars name) name)
 
       addMain (deps, fields, main) =
         addDefNode home name args body deps $
@@ -257,7 +271,7 @@ addDefHelp region annotations home name args body graph@(Opt.LocalGraph _ nodes 
     case Type.deepDealias tipe of
       Can.TType hm nm [_] | hm == ModuleName.virtualDom && nm == Name.node ->
           Result.ok $ addMain $ Names.run $
-            Names.registerKernel Name.virtualDom Opt.Static
+            Names.registerKernel Name.virtualDom False Opt.Static
 
       Can.TType hm nm [flags, _, message] | hm == ModuleName.platform && nm == Name.program ->
           case Effects.checkPayload flags of

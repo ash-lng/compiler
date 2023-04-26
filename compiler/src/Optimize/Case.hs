@@ -5,6 +5,9 @@ module Optimize.Case
   where
 
 
+import Debug.Trace
+
+
 import Control.Arrow (second)
 import qualified Data.Map as Map
 import Data.Map ((!))
@@ -129,7 +132,7 @@ createChoices
     -> (Int, Opt.Expr)
     -> ( (Int, Opt.Choice), Maybe (Int, Opt.Expr) )
 createChoices targetCounts (target, branch) =
-    if targetCounts ! target == 1 then
+    if targetCounts ! (trace ("target:"++show target) target) == 1 then
         ( (target, Opt.Inline branch)
         , Nothing
         )
@@ -151,7 +154,7 @@ insertChoices choiceDict decider =
   in
     case decider of
       Opt.Leaf target ->
-          Opt.Leaf (choiceDict ! target)
+          Opt.Leaf (choiceDict ! (trace ("insertChoices:"++show target) target))
 
       Opt.Chain testChain success failure ->
           Opt.Chain testChain (go success) (go failure)

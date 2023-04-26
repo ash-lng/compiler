@@ -14,6 +14,9 @@ module Elm.Details
   where
 
 
+import Debug.Trace
+
+
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, newMVar, putMVar, readMVar, takeMVar)
 import Control.Monad (liftM, liftM2, liftM3)
@@ -106,9 +109,14 @@ data Local =
     , _lastCompile :: BuildID
     }
 
+instance Show Local where 
+  show (Local path _ deps main lastChange lastCompile) =
+    "Local " ++ show path ++ show deps ++ show main ++ show lastChange ++ show lastCompile
+
 
 data Foreign =
   Foreign Pkg.Name [Pkg.Name]
+  deriving (Show)
 
 
 data Extras
@@ -381,7 +389,7 @@ type Dep =
 verifyDep :: Env -> MVar (Map.Map Pkg.Name (MVar Dep)) -> Map.Map Pkg.Name Solver.Details -> Pkg.Name -> Solver.Details -> IO Dep
 verifyDep (Env key _ _ cache manager _ _) depsMVar solution pkg details@(Solver.Details vsn directDeps) =
   do  let fingerprint = Map.intersectionWith (\(Solver.Details v _) _ -> v) solution directDeps
-      exists <- Dir.doesDirectoryExist (Stuff.package cache pkg vsn </> "src")
+      exists <- Dir.doesDirectoryExist (Stuff.package cache (traceShow ("verifyDep1330", pkg) pkg) vsn </> "src")
       if exists
         then
           do  Reporting.report key Reporting.DCached
@@ -496,10 +504,10 @@ gatherObjects results =
 
 addLocalGraph :: ModuleName.Raw -> Result -> Opt.GlobalGraph -> Opt.GlobalGraph
 addLocalGraph name status graph =
-  case status of
+  case (traceShow ("addLocalGraph", name, status) status) of
     RLocal _ objs _ -> Opt.addLocalGraph objs graph
     RForeign _      -> graph
-    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) cs graph
+    RKernelLocal cs -> Opt.addKernel (Name.getKernel name) (Name.isCoreMod name) cs graph
     RKernelForeign  -> graph
 
 
@@ -566,13 +574,15 @@ data Status
   | SForeign I.Interface
   | SKernelLocal [Kernel.Chunk]
   | SKernelForeign
+  deriving (Show)
 
 
 crawlModule :: Map.Map ModuleName.Raw ForeignInterface -> MVar StatusDict -> Pkg.Name -> FilePath -> DocsStatus -> ModuleName.Raw -> IO (Maybe Status)
 crawlModule foreignDeps mvar pkg src docsStatus name =
   do  let path = src </> ModuleName.toFilePath name <.> "elm"
       exists <- File.exists path
-      case Map.lookup name foreignDeps of
+      let name_ = traceShow ("crawlModule", name, path, exists, Pkg.isKernel pkg, Name.isKernel name) name
+      case Map.lookup name_ foreignDeps of
         Just ForeignAmbiguous ->
           return Nothing
 
@@ -618,7 +628,8 @@ crawlImports foreignDeps mvar pkg src imports =
 crawlKernel :: Map.Map ModuleName.Raw ForeignInterface -> MVar StatusDict -> Pkg.Name -> FilePath -> ModuleName.Raw -> IO (Maybe Status)
 crawlKernel foreignDeps mvar pkg src name =
   do  let path = src </> ModuleName.toFilePath name <.> "js"
-      exists <- File.exists path
+      let path_ = trace ("zzpath="++path) path
+      exists <- File.exists path_
       if exists
         then
           do  bytes <- File.readUtf8 path
@@ -649,11 +660,12 @@ data Result
   | RForeign I.Interface
   | RKernelLocal [Kernel.Chunk]
   | RKernelForeign
+  deriving (Show)
 
 
 compile :: Pkg.Name -> MVar (Map.Map ModuleName.Raw (MVar (Maybe Result))) -> Status -> IO (Maybe Result)
 compile pkg mvar status =
-  case status of
+  case (traceShow ("compile", pkg, status) status) of
     SLocal docsStatus deps modul ->
       do  resultsDict <- readMVar mvar
           maybeResults <- traverse readMVar (Map.intersection resultsDict deps)
@@ -699,6 +711,7 @@ getInterface result =
 data DocsStatus
   = DocsNeeded
   | DocsNotNeeded
+  deriving (Show)
 
 
 getDocsStatus :: Stuff.PackageCache -> Pkg.Name -> V.Version -> IO DocsStatus

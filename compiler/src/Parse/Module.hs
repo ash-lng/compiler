@@ -9,6 +9,8 @@ module Parse.Module
   )
   where
 
+import Debug.Trace
+
 
 import qualified Data.ByteString as BS
 import qualified Data.Name as Name
@@ -45,6 +47,7 @@ fromByteString projectType source =
 data ProjectType
   = Package Pkg.Name
   | Application
+  deriving (Show)
 
 
 isCore :: ProjectType -> Bool
@@ -56,9 +59,7 @@ isCore projectType =
 
 isKernel :: ProjectType -> Bool
 isKernel projectType =
-  case projectType of
-    Package pkg -> Pkg.isKernel pkg
-    Application -> False
+  True
 
 
 
@@ -92,7 +93,7 @@ checkModule projectType (Module maybeHeader imports infixes decls) =
   let
     (values, unions, aliases, ports) = categorizeDecls [] [] [] [] decls
   in
-  case maybeHeader of
+  case (traceShow ("maybeHeaderzz", maybeHeader) maybeHeader) of
     Just (Header name effects exports docs) ->
       Src.Module (Just name) exports (toDocs docs decls) imports values unions aliases infixes
         <$> checkEffects projectType ports effects
@@ -243,12 +244,14 @@ chompModuleDocCommentSpace =
 
 data Header =
   Header (A.Located Name.Name) Effects (A.Located Src.Exposing) (Either A.Region Src.Comment)
+  deriving (Show)
 
 
 data Effects
   = NoEffects A.Region
   | Ports A.Region
   | Manager A.Region Src.Manager
+  deriving (Show)
 
 
 chompHeader :: Parser E.Module (Maybe Header)

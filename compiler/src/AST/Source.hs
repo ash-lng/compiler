@@ -118,6 +118,7 @@ data Type_
   | TRecord [(A.Located Name, Type)] (Maybe (A.Located Name))
   | TUnit
   | TTuple Type Type [Type]
+  deriving (Show)
 
 
 
@@ -136,6 +137,10 @@ data Module =
     , _binops  :: [A.Located Infix]
     , _effects :: Effects
     }
+
+
+instance Show Module where
+  show mod = "Module [" ++ (Name.toChars (getName mod)) ++ "]"
 
 
 getName :: Module -> Name
@@ -165,29 +170,33 @@ data Value = Value (A.Located Name) [Pattern] Expr (Maybe Type)
 data Union = Union (A.Located Name) [A.Located Name] [(A.Located Name, [Type])]
 data Alias = Alias (A.Located Name) [A.Located Name] Type
 data Infix = Infix Name Binop.Associativity Binop.Precedence Name
-data Port = Port (A.Located Name) Type
+data Port = Port (A.Located Name) Type deriving (Show)
 
 
 data Effects
   = NoEffects
   | Ports [Port]
   | Manager A.Region Manager
+  deriving (Show)
 
 
 data Manager
   = Cmd (A.Located Name)
   | Sub (A.Located Name)
   | Fx (A.Located Name) (A.Located Name)
+  deriving (Show)
 
 
 data Docs
   = NoDocs A.Region
   | YesDocs Comment [(Name, Comment)]
-
+  deriving (Show)
 
 newtype Comment =
   Comment P.Snippet
 
+instance Show Comment where
+  show _ = "A comment"
 
 
 -- EXPOSING
@@ -196,14 +205,17 @@ newtype Comment =
 data Exposing
   = Open
   | Explicit [Exposed]
+  deriving (Show)
 
 
 data Exposed
   = Lower (A.Located Name)
   | Upper (A.Located Name) Privacy
   | Operator A.Region Name
+  deriving (Show)
 
 
 data Privacy
   = Public A.Region
   | Private
+  deriving (Show)

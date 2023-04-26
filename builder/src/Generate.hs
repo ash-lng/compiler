@@ -8,6 +8,9 @@ module Generate
   where
 
 
+import Debug.Trace
+
+
 import Prelude hiding (cycle, print)
 import Control.Concurrent (MVar, forkIO, newEmptyMVar, newMVar, putMVar, readMVar)
 import Control.Monad (liftM2)
@@ -48,40 +51,44 @@ type Task a =
 
 
 debug :: FilePath -> Details.Details -> Build.Artifacts -> Task B.Builder
-debug root details (Build.Artifacts pkg ifaces roots modules) =
+debug root details (Build.Artifacts pkg ifaces roots modules kernels) =
   do  loading <- loadObjects root details modules
       types   <- loadTypes root ifaces modules
       objects <- finalizeObjects loading
       let mode = Mode.Dev (Just types)
       let graph = objectsToGlobalGraph objects
+      let graphFull = addKernelsToGlobalGraph kernels graph
       let mains = gatherMains pkg objects roots
-      return $ JS.generate mode graph mains
+      return $ JS.generate mode graphFull mains
 
 
 dev :: FilePath -> Details.Details -> Build.Artifacts -> Task B.Builder
-dev root details (Build.Artifacts pkg _ roots modules) =
+dev root details (Build.Artifacts pkg _ roots modules kernels) =
   do  objects <- finalizeObjects =<< loadObjects root details modules
       let mode = Mode.Dev Nothing
       let graph = objectsToGlobalGraph objects
+      let graphFull = addKernelsToGlobalGraph kernels graph
       let mains = gatherMains pkg objects roots
-      return $ JS.generate mode graph mains
+      return $ JS.generate mode graphFull mains
 
 
 prod :: FilePath -> Details.Details -> Build.Artifacts -> Task B.Builder
-prod root details (Build.Artifacts pkg _ roots modules) =
+prod root details (Build.Artifacts pkg _ roots modules kernels) =
   do  objects <- finalizeObjects =<< loadObjects root details modules
       checkForDebugUses objects
       let graph = objectsToGlobalGraph objects
-      let mode = Mode.Prod (Mode.shortenFieldNames graph)
+      let graphFull = addKernelsToGlobalGraph kernels graph
+      let mode = Mode.Prod (Mode.shortenFieldNames graphFull)
       let mains = gatherMains pkg objects roots
       return $ JS.generate mode graph mains
 
 
 repl :: FilePath -> Details.Details -> Bool -> Build.ReplArtifacts -> N.Name -> Task B.Builder
-repl root details ansi (Build.ReplArtifacts home modules localizer annotations) name =
+repl root details ansi (Build.ReplArtifacts home modules localizer annotations kernels) name =
   do  objects <- finalizeObjects =<< loadObjects root details modules
-      let graph = objectsToGlobalGraph objects
-      return $ JS.generateForRepl ansi localizer graph home name (annotations ! name)
+      let graph = objectsToGlobalGraph (traceShow ("objectZapow1339", objects) objects)
+      let graphFull = addKernelsToGlobalGraph kernels graph
+      return $ JS.generateForRepl ansi localizer (traceShow ("graphFull1332", graphFull) graphFull) home name (annotations ! name)
 
 
 
@@ -136,7 +143,7 @@ loadObjects root details modules =
 
 loadObject :: FilePath -> Build.Module -> IO (ModuleName.Raw, MVar (Maybe Opt.LocalGraph))
 loadObject root modul =
-  case modul of
+  case trace ("zz loadObject:" ++ show modul) modul of
     Build.Fresh name _ graph ->
       do  mvar <- newMVar (Just graph)
           return (name, mvar)
@@ -156,6 +163,7 @@ data Objects =
     { _foreign :: Opt.GlobalGraph
     , _locals :: Map.Map ModuleName.Raw Opt.LocalGraph
     }
+  deriving (Show)
 
 
 finalizeObjects :: LoadingObjects -> Task Objects
@@ -172,6 +180,15 @@ objectsToGlobalGraph :: Objects -> Opt.GlobalGraph
 objectsToGlobalGraph (Objects globals locals) =
   foldr Opt.addLocalGraph globals locals
 
+
+addKernelsToGlobalGraph :: [Build.LocalKernel] -> Opt.GlobalGraph -> Opt.GlobalGraph
+addKernelsToGlobalGraph kernels graph =
+  foldr addKernel graph kernels
+
+
+addKernel :: Build.LocalKernel -> Opt.GlobalGraph -> Opt.GlobalGraph
+addKernel (Build.LocalKernel name isCoreMod chunks) =
+  Opt.addKernel (N.getKernel name) isCoreMod chunks
 
 
 -- LOAD TYPES

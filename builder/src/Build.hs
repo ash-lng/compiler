@@ -10,9 +10,13 @@ module Build
   , CachedInterface(..)
   , ReplArtifacts(..)
   , DocsGoal(..)
+  , LocalKernel(..)
   , getRootNames
   )
   where
+
+
+import Debug.Trace
 
 
 import Control.Concurrent (forkIO)
@@ -56,6 +60,7 @@ import qualified Reporting.Error.Import as Import
 import qualified Reporting.Exit as Exit
 import qualified Reporting.Render.Type.Localizer as L
 import qualified Stuff
+import qualified Elm.Kernel as K
 
 
 
@@ -173,12 +178,23 @@ data Artifacts =
     , _deps :: Dependencies
     , _roots :: NE.List Root
     , _modules :: [Module]
+    , _kernels :: [LocalKernel]
     }
 
 
 data Module
   = Fresh ModuleName.Raw I.Interface Opt.LocalGraph
   | Cached ModuleName.Raw Bool (MVar CachedInterface)
+
+
+instance Show Module where
+  show mod =
+    case mod of
+      Fresh name interface localGraph ->
+        "Fresh " ++ show name ++ " " ++ show interface ++ " localGraph"
+
+      Cached name b _ ->
+        "Cached " ++ show name ++ " " ++ show b
 
 
 type Dependencies =
@@ -199,9 +215,9 @@ fromPaths style root details paths =
           do  -- crawl
               dmvar <- Details.loadInterfaces root details
               smvar <- newMVar Map.empty
-              srootMVars <- traverse (fork . crawlRoot env smvar) lroots
-              sroots <- traverse readMVar srootMVars
-              statuses <- traverse readMVar =<< readMVar smvar
+              srootMVars <- traverse (fork . crawlRoot env smvar) (trace "c0fggf" lroots)
+              sroots <- traverse readMVar (trace "c1fggf" srootMVars)
+              statuses <- traverse readMVar =<< readMVar (trace "c2fggf" smvar)
 
               midpoint <- checkMidpointAndRoots dmvar statuses sroots
               case midpoint of
@@ -213,10 +229,10 @@ fromPaths style root details paths =
                       rmvar <- newEmptyMVar
                       resultsMVars <- forkWithKey (checkModule env foreigns rmvar) statuses
                       putMVar rmvar resultsMVars
-                      rrootMVars <- traverse (fork . checkRoot env resultsMVars) sroots
-                      results <- traverse readMVar resultsMVars
-                      writeDetails root details results
-                      toArtifacts env foreigns results <$> traverse readMVar rrootMVars
+                      rrootMVars <- traverse (fork . checkRoot env resultsMVars) (trace "d0fggf" sroots)
+                      results <- traverse readMVar (trace "d1fggf" resultsMVars)
+                      writeDetails root details (trace "d1fggf.2" results)
+                      toArtifacts env foreigns results <$> traverse readMVar (trace "d2fggf" rrootMVars)
 
 
 
@@ -224,7 +240,7 @@ fromPaths style root details paths =
 
 
 getRootNames :: Artifacts -> NE.List ModuleName.Raw
-getRootNames (Artifacts _ _ roots _) =
+getRootNames (Artifacts _ _ roots _ _) =
   fmap getRootName roots
 
 
@@ -243,13 +259,22 @@ type StatusDict =
   Map.Map ModuleName.Raw (MVar Status)
 
 
+newtype FileTime = FileTime File.Time
+
+
+instance Show FileTime where
+  show ft = "FileTime"
+
+
 data Status
   = SCached Details.Local
   | SChanged Details.Local B.ByteString Src.Module DocsNeed
   | SBadImport Import.Problem
-  | SBadSyntax FilePath File.Time B.ByteString Syntax.Error
+  | SBadSyntax FilePath FileTime B.ByteString Syntax.Error
   | SForeign Pkg.Name
   | SKernel
+  | SLocalKernel [K.Chunk]
+  deriving (Show)
 
 
 crawlDeps :: Env -> MVar StatusDict -> [ModuleName.Raw] -> a -> IO a
@@ -257,7 +282,7 @@ crawlDeps env mvar deps blockedValue =
   do  statusDict <- takeMVar mvar
       let depsDict = Map.fromKeys (\_ -> ()) deps
       let newsDict = Map.difference depsDict statusDict
-      statuses <- Map.traverseWithKey crawlNew newsDict
+      statuses <- Map.traverseWithKey crawlNew (traceShow ("news", newsDict) newsDict)
       putMVar mvar (Map.union statuses statusDict)
       mapM_ readMVar statuses
       return blockedValue
@@ -269,9 +294,9 @@ crawlModule :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> IO Status
 crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar docsNeed name =
   do  let fileName = ModuleName.toFilePath name <.> "elm"
 
-      paths <- filterM File.exists (map (`addRelative` fileName) srcDirs)
+      paths <- filterM File.exists (map (`addRelative` (traceShow ("crawlModule1331", fileName) fileName)) srcDirs)
 
-      case paths of
+      case (traceShow ("paths1331", paths) paths) of
         [path] ->
           case Map.lookup name foreigns of
             Just (Details.Foreign dep deps) ->
@@ -302,25 +327,48 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
                   return $ SBadImport $ Import.AmbiguousForeign dep d ds
 
             Nothing ->
-              if Name.isKernel name && Parse.isKernel projectType then
-                do  exists <- File.exists ("src" </> ModuleName.toFilePath name <.> "js")
-                    return $ if exists then SKernel else SBadImport Import.NotFound
+              if (traceShow ("zzz1337", Name.isKernel name, Parse.isKernel projectType) Name.isKernel name && Parse.isKernel projectType) then
+                do  let path = "src" </> ModuleName.toFilePath name <.> "js"
+                    let path_ = trace ("path="++path) path
+                    exists <- File.exists path_
+                    let exists_ = trace ("exists="++show exists) exists
+                    case (exists_, Name.isCoreMod name) of
+                      (True, True) ->
+                        do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
+                            bytes <- File.readUtf8 path
+                            case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
+                              Nothing ->
+                                error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
+
+                              Just (K.Content imports chunks) ->
+                                crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
+                      
+                      (False, True) ->
+                        return $ SBadImport Import.NotFound
+                      
+                      (_, _) ->
+                        return $ SKernel
+
+                      
               else
                 return $ SBadImport Import.NotFound
 
 
+-- 1550 This actually calls the parse file for say Simple.elm
 crawlFile :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> FilePath -> File.Time -> Details.BuildID -> IO Status
 crawlFile env@(Env _ root projectType _ buildID _ _) mvar docsNeed expectedName path time lastChange =
-  do  source <- File.readUtf8 (root </> path)
+  do  let fullPath = (root </> path)
+      let fullPath_ = trace ("fullPath=" <> fullPath) fullPath
+      source <- File.readUtf8 fullPath_
 
       case Parse.fromByteString projectType source of
         Left err ->
-          return $ SBadSyntax path time source err
+          return $ SBadSyntax path (FileTime time) source err
 
         Right modul@(Src.Module maybeActualName _ _ imports values _ _ _ _) ->
           case maybeActualName of
             Nothing ->
-              return $ SBadSyntax path time source (Syntax.ModuleNameUnspecified expectedName)
+              return $ SBadSyntax path (FileTime time) source (Syntax.ModuleNameUnspecified expectedName)
 
             Just name@(A.At _ actualName) ->
               if expectedName == actualName then
@@ -330,7 +378,7 @@ crawlFile env@(Env _ root projectType _ buildID _ _) mvar docsNeed expectedName 
                 in
                 crawlDeps env mvar deps (SChanged local source modul docsNeed)
               else
-                return $ SBadSyntax path time source (Syntax.ModuleNameMismatch expectedName name)
+                return $ SBadSyntax path (FileTime time) source (Syntax.ModuleNameMismatch expectedName name)
 
 
 isMain :: A.Located Src.Value -> Bool
@@ -354,18 +402,19 @@ data Result
   | RProblem Error.Module
   | RBlocked
   | RForeign I.Interface
-  | RKernel
+  | RKernel [K.Chunk]
 
 
 data CachedInterface
   = Unneeded
   | Loaded I.Interface
   | Corrupted
+  deriving (Show)
 
 
 checkModule :: Env -> Dependencies -> MVar ResultDict -> ModuleName.Raw -> Status -> IO Result
-checkModule env@(Env _ root projectType _ _ _ _) foreigns resultsMVar name status =
-  case status of
+checkModule env@(Env _ root projectType _ _ _ envForeigns) foreigns resultsMVar name status =
+  case traceShow ("checkModule", projectType, name, status) status of
     SCached local@(Details.Local path time deps hasMain lastChange lastCompile) ->
       do  results <- readMVar resultsMVar
           depsStatus <- checkDeps root results deps lastCompile
@@ -418,7 +467,7 @@ checkModule env@(Env _ root projectType _ _ _ _) foreigns resultsMVar name statu
     SBadImport importProblem ->
       return (RNotFound importProblem)
 
-    SBadSyntax path time source err ->
+    SBadSyntax path (FileTime time) source err ->
       return $ RProblem $ Error.Module name path time source $
         Error.BadSyntax err
 
@@ -428,7 +477,10 @@ checkModule env@(Env _ root projectType _ _ _ _) foreigns resultsMVar name statu
         I.Private _ _ _ -> error $ "mistakenly seeing private interface for " ++ Pkg.toChars home ++ " " ++ ModuleName.toChars name
 
     SKernel ->
-      return RKernel
+      return $ RKernel []
+
+    SLocalKernel chunks ->
+      return $ RKernel chunks
 
 
 
@@ -478,7 +530,7 @@ checkDepsHelp root results deps new same cached importProblems isBlocked lastDep
             RForeign iface ->
               checkDepsHelp root results otherDeps new ((dep,iface) : same) cached importProblems isBlocked lastDepChange lastCompile
 
-            RKernel ->
+            RKernel _ ->
               checkDepsHelp root results otherDeps new same cached importProblems isBlocked lastDepChange lastCompile
 
 
@@ -646,6 +698,7 @@ addToGraph name status graph =
         SBadSyntax _ _ _ _                            -> []
         SForeign _                                    -> []
         SKernel                                       -> []
+        SLocalKernel _                                -> []
   in
   (name, name, dependencies) : graph
 
@@ -694,6 +747,7 @@ checkInside name p1 status =
     SBadSyntax _ _ _ _                          -> Right ()
     SForeign _                                  -> Right ()
     SKernel                                     -> Right ()
+    SLocalKernel _                              -> Right ()
 
 
 
@@ -764,7 +818,7 @@ addNewLocal name result locals =
     RProblem _        -> locals
     RBlocked          -> locals
     RForeign _        -> locals
-    RKernel           -> locals
+    RKernel _         -> locals
 
 
 
@@ -793,7 +847,7 @@ addErrors result errors =
     RProblem e    -> e:errors
     RBlocked      ->   errors
     RForeign _    ->   errors
-    RKernel       ->   errors
+    RKernel _     ->   errors
 
 
 addImportProblems :: Map.Map ModuleName.Raw Result -> ModuleName.Raw -> [(ModuleName.Raw, Import.Problem)] -> [(ModuleName.Raw, Import.Problem)]
@@ -806,7 +860,7 @@ addImportProblems results name problems =
     RProblem _    -> problems
     RBlocked      -> problems
     RForeign _    -> problems
-    RKernel       -> problems
+    RKernel _     -> problems
 
 
 
@@ -822,6 +876,9 @@ data DocsGoal a where
 newtype DocsNeed =
   DocsNeed { needsDocs :: Bool }
 
+
+instance Show DocsNeed where
+  show _ = "DocsNeed"
 
 toDocsNeed :: DocsGoal a -> DocsNeed
 toDocsNeed goal =
@@ -864,7 +921,7 @@ toDocs result =
     RProblem _    -> Nothing
     RBlocked      -> Nothing
     RForeign _    -> Nothing
-    RKernel       -> Nothing
+    RKernel _     -> Nothing
 
 
 
@@ -876,12 +933,21 @@ toDocs result =
 -- FROM REPL
 
 
+data LocalKernel =
+  LocalKernel
+    {
+      _kernel_name :: Name.Name,
+      _kernel_is_core_mod :: Bool,
+      _kernel_chunks :: [K.Chunk]
+    }
+
 data ReplArtifacts =
   ReplArtifacts
     { _repl_home :: ModuleName.Canonical
     , _repl_modules :: [Module]
     , _repl_localizer :: L.Localizer
     , _repl_annotations :: Map.Map Name.Name Can.Annotation
+    , _repl_kernels :: [LocalKernel]
     }
 
 
@@ -916,6 +982,7 @@ fromRepl root details source =
                       finalizeReplArtifacts env source modul depsStatus resultMVars results
 
 
+-- NOTE [1550] Are we _finally_ calling compile here?
 finalizeReplArtifacts :: Env -> B.ByteString -> Src.Module -> DepsStatus -> ResultDict -> Map.Map ModuleName.Raw Result -> IO (Either Exit.Repl ReplArtifacts)
 finalizeReplArtifacts env@(Env _ root projectType _ _ _ _) source modul@(Src.Module _ _ _ imports _ _ _ _ _) depsStatus resultMVars results =
   let
@@ -929,8 +996,9 @@ finalizeReplArtifacts env@(Env _ root projectType _ _ _ _) source modul@(Src.Mod
             h = Can._name canonical
             m = Fresh (Src.getName modul) (I.fromModule pkg canonical annotations) objects
             ms = Map.foldrWithKey addInside [] results
+            kernels = Map.foldrWithKey fetchKernels [] results
           in
-          return $ Right $ ReplArtifacts h (m:ms) (L.fromModule modul) annotations
+          return $ Right $ ReplArtifacts h (m:ms) (L.fromModule modul) annotations kernels
 
         Left errors ->
           return $ Left $ Exit.ReplBadInput source errors
@@ -1198,8 +1266,9 @@ toArtifacts (Env _ root projectType _ _ _ _) foreigns results rootResults =
       Left (Exit.BuildBadModules root e es)
 
     Right roots ->
-      Right $ Artifacts (projectTypeToPkg projectType) foreigns roots $
-        Map.foldrWithKey addInside (foldr addOutside [] rootResults) results
+      Right $ ( Artifacts (projectTypeToPkg projectType) foreigns roots
+        ( Map.foldrWithKey addInside (foldr addOutside [] rootResults) results )
+        ( Map.foldrWithKey fetchKernels [] results ) )
 
 
 gatherProblemsOrMains :: Map.Map ModuleName.Raw Result -> NE.List RootResult -> Either (NE.List Error.Module) (NE.List Root)
@@ -1234,7 +1303,20 @@ addInside name result modules =
     RProblem _           -> error (badInside name)
     RBlocked             -> error (badInside name)
     RForeign _           -> modules
-    RKernel              -> modules
+    RKernel cs           -> (traceStack ( show ("addInside kernel", name, cs) ) modules)
+
+
+fetchKernels :: ModuleName.Raw -> Result -> [LocalKernel] -> [LocalKernel]
+fetchKernels name result kernels =
+  case result of
+    RNew  _ _ _ _ -> kernels
+    RSame _ _ _ _ -> kernels
+    RCached _ _ _  -> kernels
+    RNotFound _          -> kernels
+    RProblem _           -> kernels
+    RBlocked             -> kernels
+    RForeign _           -> kernels
+    RKernel cs           -> (traceShow ("fetchKernels kernel", name, cs) ( (LocalKernel name True cs) : kernels ) )
 
 
 badInside :: ModuleName.Raw -> [Char]

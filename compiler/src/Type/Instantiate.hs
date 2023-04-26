@@ -6,6 +6,8 @@ module Type.Instantiate
   )
   where
 
+import Debug.Trace
+
 
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict ((!))
@@ -36,7 +38,7 @@ fromSrcType freeVars sourceType =
         <*> fromSrcType freeVars result
 
     Can.TVar name ->
-      return (freeVars ! name)
+      return (freeVars ! (trace ("fromSrcType:"++Name.toChars name) name))
 
     Can.TType home name args ->
       AppN home name <$> traverse (fromSrcType freeVars) args
@@ -69,7 +71,7 @@ fromSrcType freeVars sourceType =
               return EmptyRecordN
 
             Just ext ->
-              return (freeVars ! ext)
+              return (freeVars ! (trace ("fromSrcType - TRecord:") ext))
 
 
 fromSrcFieldType :: Map.Map Name.Name Type -> Can.FieldType -> IO Type
