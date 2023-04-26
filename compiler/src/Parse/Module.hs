@@ -56,8 +56,9 @@ isCore projectType =
 
 isKernel :: ProjectType -> Bool
 isKernel projectType =
-  True
-
+  case projectType of
+    Package pkg -> Pkg.isKernel pkg
+    Application -> False
 
 
 -- MODULE

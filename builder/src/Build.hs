@@ -306,31 +306,32 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
                   return $ SBadImport $ Import.AmbiguousForeign dep d ds
 
             Nothing ->
-              if (traceShow ("zzz1337", Name.isKernel name, Parse.isKernel projectType) Name.isKernel name && Parse.isKernel projectType) then
-                do  let path = "src" </> ModuleName.toFilePath name <.> "js"
-                    let path_ = trace ("path="++path) path
-                    exists <- File.exists path_
-                    let exists_ = trace ("exists="++show exists) exists
-                    case (exists_, Name.isCoreMod name) of
-                      (True, True) ->
-                        do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
-                            bytes <- File.readUtf8 path
-                            case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
-                              Nothing ->
-                                error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
+              let
+                isCoreMod = Name.isCoreMod name
+              in
+                if isCoreMod || ( Name.isKernel name && Parse.isKernel projectType ) then
+                  do  let path = "src" </> ModuleName.toFilePath name <.> "js"
+                      exists <- File.exists path
+                      case (exists, isCoreMod) of
+                        (True, True) ->
+                          do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
+                              bytes <- File.readUtf8 path
+                              case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
+                                Nothing ->
+                                  error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
 
-                              Just (K.Content imports chunks) ->
-                                crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
-                      
-                      (False, True) ->
-                        return $ SBadImport Import.NotFound
-                      
-                      (_, _) ->
-                        return $ SKernel
+                                Just (K.Content imports chunks) ->
+                                  crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
+                        
+                        (False, True) ->
+                          return $ SBadImport Import.NotFound
+                        
+                        (_, _) ->
+                          return $ SKernel
 
-                      
-              else
-                return $ SBadImport Import.NotFound
+                        
+                else
+                  return $ SBadImport Import.NotFound
 
 
 crawlFile :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> FilePath -> File.Time -> Details.BuildID -> IO Status
@@ -1274,7 +1275,7 @@ addInside name result modules =
     RProblem _           -> error (badInside name)
     RBlocked             -> error (badInside name)
     RForeign _           -> modules
-    RKernel cs           -> (traceStack ( show ("addInside kernel", name, cs) ) modules)
+    RKernel cs           -> modules
 
 
 fetchKernels :: ModuleName.Raw -> Result -> [LocalKernel] -> [LocalKernel]
@@ -1287,7 +1288,7 @@ fetchKernels name result kernels =
     RProblem _           -> kernels
     RBlocked             -> kernels
     RForeign _           -> kernels
-    RKernel cs           -> (traceShow ("fetchKernels kernel", name, cs) ( (LocalKernel name True cs) : kernels ) )
+    RKernel cs           -> (LocalKernel name True cs) : kernels
 
 
 badInside :: ModuleName.Raw -> [Char]

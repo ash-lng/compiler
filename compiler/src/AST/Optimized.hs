@@ -194,7 +194,7 @@ addLocalGraph (LocalGraph _ nodes1 fields1) (GlobalGraph nodes2 fields2) =
 addKernel :: Name.Name -> Bool -> [K.Chunk] -> GlobalGraph -> GlobalGraph
 addKernel shortName isCoreMod chunks (GlobalGraph nodes fields) =
   let
-    global = toKernelGlobal (traceShow ("addKernel1338", shortName) shortName) isCoreMod
+    global = toKernelGlobal shortName isCoreMod
     node = Kernel chunks (foldr (addKernelDep isCoreMod) Set.empty chunks)
   in
   GlobalGraph
@@ -218,7 +218,7 @@ addKernelDep isCoreMod chunk deps =
 
 toKernelGlobal :: Name.Name -> Bool -> Global
 toKernelGlobal shortName isCoreMod =
-  if traceStack (show ("toKernelGlobal", shortName, isCoreMod)) isCoreMod then
+  if isCoreMod then
     Global (ModuleName.Canonical Pkg.dummyName shortName) Name.dollar
   else
     Global (ModuleName.Canonical Pkg.kernel shortName) Name.dollar
