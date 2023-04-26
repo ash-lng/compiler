@@ -128,12 +128,9 @@ checkEffects projectType ports effects =
             _:_ -> Right (Src.Ports ports)
 
     Manager region manager ->
-      if isKernel projectType then
-        case ports of
-          []  -> Right (Src.Manager region manager)
-          _:_ -> Left (E.UnexpectedPort region)
-      else
-        Left (E.NoEffectsOutsideKernel region)
+      case ports of
+        []  -> Right (Src.Manager region manager)
+        _:_ -> Left (E.UnexpectedPort region)
 
 
 

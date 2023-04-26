@@ -70,6 +70,8 @@ data DecisionTree
       }
   deriving (Eq)
 
+instance Show DecisionTree where
+  show _ = "DecisionTree"
 
 data Test
   = IsCtor ModuleName.Canonical Name.Name Index.ZeroBased Int Can.CtorOpts

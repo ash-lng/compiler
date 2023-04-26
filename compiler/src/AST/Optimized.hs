@@ -115,6 +115,8 @@ data Decider a
       }
   deriving (Eq)
 
+instance Show (Decider a) where
+  show _ = "Decider"
 
 data Choice
   = Inline Expr

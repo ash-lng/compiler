@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE BangPatterns, OverloadedStrings #-}
+{-# LANGUAGE BangPatterns, OverloadedStrings, StandaloneDeriving #-}
 module Elm.Details
   ( Details(..)
   , BuildID
@@ -60,6 +60,10 @@ import qualified Reporting.Task as Task
 import qualified Stuff
 
 
+import qualified Elm.Docs
+import qualified Parse.Primitives
+import qualified Elm.String
+import qualified Elm.Compiler.Type
 
 -- DETAILS
 
@@ -502,7 +506,7 @@ addLocalGraph name status graph =
     RKernelLocal cs ->
       let
         isCoreMod = Name.isCoreMod name
-        shortName = if isCoreMod then Name.getCoreMod else Name.getKernel $ name
+        shortName = ( if isCoreMod then Name.getCoreMod else Name.getKernel ) name
       in
         Opt.addKernel shortName isCoreMod cs graph
     RKernelForeign  -> graph
@@ -654,6 +658,45 @@ data Result
   | RForeign I.Interface
   | RKernelLocal [Kernel.Chunk]
   | RKernelForeign
+
+deriving instance Show Opt.LocalGraph
+deriving instance Show Docs.Associativity
+deriving instance Show Docs.Precedence
+deriving instance Show Docs.Module
+deriving instance Show Docs.Union
+deriving instance Show Docs.Alias
+deriving instance Show Can.Alias
+deriving instance Show Can.Annotation
+deriving instance Show Can.Ctor
+deriving instance Show Can.FieldType
+deriving instance Show Can.Type
+deriving instance Show Can.Union
+deriving instance Show I.Interface
+deriving instance Show I.Union
+deriving instance Show I.Alias
+deriving instance Show I.Binop
+deriving instance Show Kernel.Chunk
+deriving instance Show ModuleName.Canonical
+deriving instance Show Result
+deriving instance Show Opt.Main
+deriving instance Show Can.AliasType
+deriving instance Show Can.CtorOpts
+deriving instance Show Opt.Global
+deriving instance Show Src.Comment
+deriving instance Show Opt.Expr
+deriving instance Show Opt.Node
+deriving instance Show Parse.Primitives.Snippet
+deriving instance Show Opt.Def
+deriving instance Show Opt.EffectsType
+deriving instance Show Docs.Value
+deriving instance Show A.Region
+deriving instance Show Docs.Binop
+deriving instance Show Opt.Destructor
+deriving instance Show A.Position
+deriving instance Show Elm.Compiler.Type.Type
+deriving instance Show Opt.Choice
+deriving instance Show Opt.Path
+deriving instance Show Foreign
 
 
 compile :: Pkg.Name -> MVar (Map.Map ModuleName.Raw (MVar (Maybe Result))) -> Status -> IO (Maybe Result)

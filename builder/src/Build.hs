@@ -15,6 +15,8 @@ module Build
   )
   where
 
+import Debug.Trace
+
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar
@@ -307,7 +309,7 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
 
             Nothing ->
               let
-                isCoreMod = Name.isCoreMod name
+                isCoreMod = Name.isCoreMod (traceShow ("isCoreMod", name, Name.isCoreMod name) name)
               in
                 if isCoreMod || ( Name.isKernel name && Parse.isKernel projectType ) then
                   do  let path = "src" </> ModuleName.toFilePath name <.> "js"
@@ -324,14 +326,14 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
                                   crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
                         
                         (False, True) ->
-                          return $ SBadImport Import.NotFound
+                          return $ (traceShow ("NotFound00", name) SBadImport Import.NotFound)
                         
                         (_, _) ->
                           return $ SKernel
 
                         
                 else
-                  return $ SBadImport Import.NotFound
+                  return $ (traceShow ("NotFound01", name, foreigns) SBadImport Import.NotFound)
 
 
 crawlFile :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> FilePath -> File.Time -> Details.BuildID -> IO Status
@@ -1271,11 +1273,11 @@ addInside name result modules =
     RNew  _ iface objs _ -> Fresh name iface objs : modules
     RSame _ iface objs _ -> Fresh name iface objs : modules
     RCached main _ mvar  -> Cached name main mvar : modules
-    RNotFound _          -> error (badInside name)
-    RProblem _           -> error (badInside name)
-    RBlocked             -> error (badInside name)
+    RNotFound p          -> error (badInside name (show p))
+    RProblem _           -> error (badInside name "")
+    RBlocked             -> error (badInside name "")
     RForeign _           -> modules
-    RKernel cs           -> modules
+    RKernel _            -> modules
 
 
 fetchKernels :: ModuleName.Raw -> Result -> [LocalKernel] -> [LocalKernel]
@@ -1291,9 +1293,9 @@ fetchKernels name result kernels =
     RKernel cs           -> (LocalKernel name True cs) : kernels
 
 
-badInside :: ModuleName.Raw -> [Char]
-badInside name =
-  "Error from `" ++ Name.toChars name ++ "` should have been reported already."
+badInside :: ModuleName.Raw -> [Char] -> [Char]
+badInside name ex =
+  "Error from `" ++ Name.toChars name ++ "` should have been reported already. " ++ ex
 
 
 addOutside :: RootResult -> [Module] -> [Module]

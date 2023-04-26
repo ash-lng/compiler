@@ -112,6 +112,18 @@ And you can install the elm executable via:
 cabal install elm --overwrite-policy=always
 ```
 
+You can build with full debugging symbols as:
+
+```
+cabal build elm --enable-executable-profiling --enable-library-profiling --ghc-options="-fprof-auto -rtsopts"
+```
+
+Run the target with `+RTS -xc -RTS` to get extended debugging information, e.g.:
+
+```
+./dist-newstyle/build/aarch64-osx/ghc-9.0.2/elm-0.19.1/x/elm/noopt/build/elm/elm +RTS -xc -RTS make src/Main.elm
+```
+
 ## Uninstall
 
 The following commands should remove everything:

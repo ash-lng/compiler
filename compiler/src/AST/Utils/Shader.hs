@@ -25,6 +25,7 @@ import qualified Data.Name as Name
 
 newtype Source =
   Source BS.ByteString
+  deriving (Show)
 
 
 

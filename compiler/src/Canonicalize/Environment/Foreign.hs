@@ -7,6 +7,8 @@ module Canonicalize.Environment.Foreign
   where
 
 
+import Debug.Trace
+
 import Control.Monad (foldM)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -84,7 +86,7 @@ toSafeImports (ModuleName.Canonical pkg _) imports =
 
 isNormal :: Src.Import -> Bool
 isNormal (Src.Import (A.At _ name) maybeAlias _) =
-  if Name.isKernel name
+  if Name.isKernel name || Name.isCoreMod name
   then
     case maybeAlias of
       Nothing -> False
@@ -100,7 +102,7 @@ isNormal (Src.Import (A.At _ name) maybeAlias _) =
 addImport :: Map.Map ModuleName.Raw I.Interface -> State -> Src.Import -> Result i w State
 addImport ifaces (State vs ts cs bs qvs qts qcs) (Src.Import (A.At _ name) maybeAlias exposing) =
   let
-    (I.Interface pkg defs unions aliases binops) = ifaces ! name
+    (I.Interface pkg defs unions aliases binops) = (traceShow "done" ( ifaces ! (traceShow ("name", Map.keys ifaces, name) name) ))
     !prefix = maybe name id maybeAlias
     !home = ModuleName.Canonical pkg name
 

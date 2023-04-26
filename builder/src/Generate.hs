@@ -83,9 +83,9 @@ prod root details (Build.Artifacts pkg _ roots modules kernels) =
 repl :: FilePath -> Details.Details -> Bool -> Build.ReplArtifacts -> N.Name -> Task B.Builder
 repl root details ansi (Build.ReplArtifacts home modules localizer annotations kernels) name =
   do  objects <- finalizeObjects =<< loadObjects root details modules
-      let graph = objectsToGlobalGraph (traceShow ("objectZapow1339", objects) objects)
+      let graph = objectsToGlobalGraph objects
       let graphFull = addKernelsToGlobalGraph kernels graph
-      return $ JS.generateForRepl ansi localizer (traceShow ("graphFull1332", graphFull) graphFull) home name (annotations ! name)
+      return $ JS.generateForRepl ansi localizer graphFull home name (annotations ! name)
 
 
 

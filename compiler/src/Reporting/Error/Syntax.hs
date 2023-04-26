@@ -71,7 +71,6 @@ data Error
   | NoPorts A.Region
   | NoPortsInPackage (A.Located Name.Name)
   | NoPortModulesInPackage A.Region
-  | NoEffectsOutsideKernel A.Region
   | ParseError Module
 
 
@@ -591,28 +590,6 @@ toReport source err =
                   ,"should","be","able","to","continue."
                   ]
               , noteForPortsInPackage
-              ]
-          )
-
-    NoEffectsOutsideKernel region ->
-      Report.Report "INVALID EFFECT MODULE" region [] $
-        Code.toSnippet source region Nothing
-          (
-            D.reflow $
-              "It is not possible to declare an `effect module` outside the @elm organization,\
-              \ so I am getting stuck here:"
-          ,
-            D.stack
-              [ D.reflow $
-                  "Switch to a normal module declaration."
-              , D.toSimpleNote $
-                  "Effect modules are designed to allow certain core functionality to be\
-                  \ defined separately from the compiler. So the @elm organization has access to\
-                  \ this so that certain changes, extensions, and fixes can be introduced without\
-                  \ needing to release new Elm binaries. For example, we want to make it possible\
-                  \ to test effects, but this may require changes to the design of effect modules.\
-                  \ By only having them defined in the @elm organization, that kind of design work\
-                  \ can proceed much more smoothly."
               ]
           )
 

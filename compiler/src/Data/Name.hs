@@ -11,6 +11,7 @@ module Data.Name
   , fromChars
   --
   , getKernel
+  , getCoreMod
   , hasDot
   , splitDots
   , isKernel
@@ -67,6 +68,8 @@ import qualified Elm.String as ES
 type Name =
   Utf8.Utf8 ELM_NAME
 
+instance Show Name where
+  show = Utf8.toChars
 
 data ELM_NAME
 
@@ -137,22 +140,25 @@ splitDots name =
 
 getKernel :: Name -> Name
 getKernel name@(Utf8.Utf8 ba#) =
-  assert (isKernel name)
-  (
-    runST
+  if isCoreMod name then
+    getCoreMod name
+  else
+    assert (isKernel name)
     (
-      let
-        !size# = sizeofByteArray# ba# -# 11#
-      in
-      ST $ \s ->
-        case newByteArray# size# s of
-          (# s, mba# #) ->
-            case copyByteArray# ba# 11# mba# 0# size# s of
-              s ->
-                case unsafeFreezeByteArray# mba# s of
-                  (# s, ba# #) -> (# s, Utf8.Utf8 ba# #)
+      runST
+      (
+        let
+          !size# = sizeofByteArray# ba# -# 11#
+        in
+        ST $ \s ->
+          case newByteArray# size# s of
+            (# s, mba# #) ->
+              case copyByteArray# ba# 11# mba# 0# size# s of
+                s ->
+                  case unsafeFreezeByteArray# mba# s of
+                    (# s, ba# #) -> (# s, Utf8.Utf8 ba# #)
+      )
     )
-  )
 
 
 getCoreMod :: Name -> Name
@@ -179,7 +185,7 @@ getCoreMod name@(Utf8.Utf8 ba#) =
 
 
 isKernel :: Name -> Bool
-isKernel x = Utf8.startsWith prefix_kernel x
+isKernel x = Utf8.startsWith prefix_kernel x || isCoreMod x
 
 isCoreMod :: Name -> Bool
 isCoreMod x = Utf8.startsWith local_kernel x
