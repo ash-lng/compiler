@@ -215,9 +215,9 @@ fromPaths style root details paths =
           do  -- crawl
               dmvar <- Details.loadInterfaces root details
               smvar <- newMVar Map.empty
-              srootMVars <- traverse (fork . crawlRoot env smvar) lroots
-              sroots <- traverse readMVar srootMVars
-              statuses <- traverse readMVar =<< readMVar smvar
+              srootMVars <- traverse (fork . crawlRoot env smvar) (trace "c0fggf" lroots)
+              sroots <- traverse readMVar (trace "c1fggf" srootMVars)
+              statuses <- traverse readMVar =<< readMVar (trace "c2fggf" smvar)
 
               midpoint <- checkMidpointAndRoots dmvar statuses sroots
               case midpoint of
@@ -229,10 +229,10 @@ fromPaths style root details paths =
                       rmvar <- newEmptyMVar
                       resultsMVars <- forkWithKey (checkModule env foreigns rmvar) statuses
                       putMVar rmvar resultsMVars
-                      rrootMVars <- traverse (fork . checkRoot env resultsMVars) sroots
-                      results <- traverse readMVar resultsMVars
-                      writeDetails root details results
-                      toArtifacts env foreigns results <$> traverse readMVar rrootMVars
+                      rrootMVars <- traverse (fork . checkRoot env resultsMVars) (trace "d0fggf" sroots)
+                      results <- traverse readMVar (trace "d1fggf" resultsMVars)
+                      writeDetails root details (trace "d1fggf.2" results)
+                      toArtifacts env foreigns results <$> traverse readMVar (trace "d2fggf" rrootMVars)
 
 
 
@@ -273,7 +273,7 @@ data Status
   | SBadSyntax FilePath FileTime B.ByteString Syntax.Error
   | SForeign Pkg.Name
   | SKernel
-  | SLocalKernel FilePath
+  | SLocalKernel [K.Chunk]
   deriving (Show)
 
 
@@ -282,7 +282,7 @@ crawlDeps env mvar deps blockedValue =
   do  statusDict <- takeMVar mvar
       let depsDict = Map.fromKeys (\_ -> ()) deps
       let newsDict = Map.difference depsDict statusDict
-      statuses <- Map.traverseWithKey crawlNew newsDict
+      statuses <- Map.traverseWithKey crawlNew (traceShow ("news", newsDict) newsDict)
       putMVar mvar (Map.union statuses statusDict)
       mapM_ readMVar statuses
       return blockedValue
@@ -332,7 +332,24 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
                     let path_ = trace ("path="++path) path
                     exists <- File.exists path_
                     let exists_ = trace ("exists="++show exists) exists
-                    return $ if exists_ then (if Name.isCoreMod name then SLocalKernel path else SKernel) else SBadImport Import.NotFound
+                    case (exists_, Name.isCoreMod name) of
+                      (True, True) ->
+                        do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
+                            bytes <- File.readUtf8 path
+                            case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
+                              Nothing ->
+                                error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
+
+                              Just (K.Content imports chunks) ->
+                                crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
+                      
+                      (False, True) ->
+                        return $ SBadImport Import.NotFound
+                      
+                      (_, _) ->
+                        return $ SKernel
+
+                      
               else
                 return $ SBadImport Import.NotFound
 
@@ -462,17 +479,8 @@ checkModule env@(Env _ root projectType _ _ _ envForeigns) foreigns resultsMVar 
     SKernel ->
       return $ RKernel []
 
-    SLocalKernel path ->
-      let
-        foreignMap = Map.map (\(Details.Foreign f _) -> f) envForeigns
-      in
-        do  bytes <- File.readUtf8 path
-            case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
-              Nothing ->
-                error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
-
-              Just (K.Content _ chunks) ->
-                return $ RKernel chunks
+    SLocalKernel chunks ->
+      return $ RKernel chunks
 
 
 

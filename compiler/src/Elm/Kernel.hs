@@ -105,8 +105,8 @@ parser pkg foreigns =
 
 
 toError :: Row -> Col -> ()
-toError _ _ =
-  ()
+toError r c =
+  (traceStack (show ("Error parsing Kernel", r, c)) ())
 
 
 ignoreError :: a -> Row -> Col -> ()
