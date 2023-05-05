@@ -220,7 +220,7 @@ addKernelDep isCoreMod chunk deps =
 
 toKernelGlobal :: Name.Name -> Bool -> Global
 toKernelGlobal shortName isCoreMod =
-  if isCoreMod then
+  if Name.isFetch shortName then
     Global (ModuleName.Canonical Pkg.dummyName shortName) Name.dollar
   else
     Global (ModuleName.Canonical Pkg.kernel shortName) Name.dollar

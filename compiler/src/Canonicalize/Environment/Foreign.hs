@@ -79,9 +79,7 @@ emptyTypes =
 
 toSafeImports :: ModuleName.Canonical -> [Src.Import] -> [Src.Import]
 toSafeImports (ModuleName.Canonical pkg _) imports =
-  if Pkg.isKernel pkg
-  then filter isNormal imports
-  else imports
+  filter isNormal imports
 
 
 isNormal :: Src.Import -> Bool

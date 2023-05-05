@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, StandaloneDeriving #-}
 module Generate.JavaScript
   ( generate
   , generateForRepl
@@ -6,6 +6,7 @@ module Generate.JavaScript
   )
   where
 
+import Debug.Trace
 
 import Prelude hiding (cycle, print)
 import qualified Data.ByteString.Builder as B
@@ -30,6 +31,7 @@ import qualified Generate.Mode as Mode
 import qualified Reporting.Doc as D
 import qualified Reporting.Render.Type as RT
 import qualified Reporting.Render.Type.Localizer as L
+import Elm.Details
 
 
 
@@ -189,7 +191,7 @@ addGlobalHelp mode graph global state =
     addDeps deps someState =
       Set.foldl' (addGlobal mode graph) someState deps
   in
-  case graph ! global of
+  case (traceShow ("graph") graph) ! (traceShow ("global", global) global) of
     Opt.Define expr deps ->
       addStmt (addDeps deps state) (
         var global (Expr.generate mode expr)

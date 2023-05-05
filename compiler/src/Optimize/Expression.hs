@@ -46,7 +46,7 @@ optimize cycle (A.At region expression) =
 
     Can.VarKernel home name ->
       -- TODO: Is this right?
-      Names.registerKernel home (Name.isCoreMod home) (Opt.VarKernel home name)
+      Names.registerKernel home (Name.isFetch home) (Opt.VarKernel home name)
 
     Can.VarForeign home name _ ->
       Names.registerGlobal home name

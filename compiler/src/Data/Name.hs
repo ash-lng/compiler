@@ -11,11 +11,11 @@ module Data.Name
   , fromChars
   --
   , getKernel
-  , getCoreMod
   , hasDot
   , splitDots
   , isKernel
   , isCoreMod
+  , isFetch
   , isNumberType
   , isComparableType
   , isAppendableType
@@ -140,40 +140,17 @@ splitDots name =
 
 getKernel :: Name -> Name
 getKernel name@(Utf8.Utf8 ba#) =
-  if isCoreMod name then
-    getCoreMod name
-  else
-    assert (isKernel name)
-    (
-      runST
-      (
-        let
-          !size# = sizeofByteArray# ba# -# 11#
-        in
-        ST $ \s ->
-          case newByteArray# size# s of
-            (# s, mba# #) ->
-              case copyByteArray# ba# 11# mba# 0# size# s of
-                s ->
-                  case unsafeFreezeByteArray# mba# s of
-                    (# s, ba# #) -> (# s, Utf8.Utf8 ba# #)
-      )
-    )
-
-
-getCoreMod :: Name -> Name
-getCoreMod name@(Utf8.Utf8 ba#) =
   assert (isKernel name)
   (
     runST
     (
       let
-        !size# = sizeofByteArray# ba# -# 4#
+        !size# = sizeofByteArray# ba# -# 11#
       in
       ST $ \s ->
         case newByteArray# size# s of
           (# s, mba# #) ->
-            case copyByteArray# ba# 4# mba# 0# size# s of
+            case copyByteArray# ba# 11# mba# 0# size# s of
               s ->
                 case unsafeFreezeByteArray# mba# s of
                   (# s, ba# #) -> (# s, Utf8.Utf8 ba# #)
@@ -189,6 +166,9 @@ isKernel x = Utf8.startsWith prefix_kernel x || isCoreMod x
 
 isCoreMod :: Name -> Bool
 isCoreMod x = Utf8.startsWith local_kernel x
+
+isFetch :: Name -> Bool
+isFetch x = Utf8.startsWith fetch x
 
 isNumberType :: Name -> Bool
 isNumberType = Utf8.startsWith prefix_number
@@ -208,7 +188,11 @@ prefix_kernel = fromChars "Elm.Kernel."
 
 {-# NOINLINE local_kernel #-}
 local_kernel :: Name
-local_kernel = fromChars "Ash."
+local_kernel = fromChars "Ash.Kernel."
+
+{-# NOINLINE fetch #-}
+fetch :: Name
+fetch = fromChars "Fetch"
 
 {-# NOINLINE prefix_number #-}
 prefix_number :: Name

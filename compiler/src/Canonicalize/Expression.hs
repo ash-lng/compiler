@@ -728,7 +728,7 @@ findVarQual region (Env.Env localHome vs _ _ _ qvs _ _) prefix name =
           Result.throw (Error.NotFoundVar region (Just prefix) name (toPossibleNames vs qvs))
 
     Nothing ->
-      if Name.isKernel prefix && Pkg.isKernel (ModuleName._package localHome) then
+      if Name.isKernel prefix then
         Result.ok $ Can.VarKernel (Name.getKernel prefix) name
       else
         Result.throw (Error.NotFoundVar region (Just prefix) name (toPossibleNames vs qvs))

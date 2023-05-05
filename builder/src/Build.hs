@@ -263,7 +263,7 @@ crawlDeps env mvar deps blockedValue =
   do  statusDict <- takeMVar mvar
       let depsDict = Map.fromKeys (\_ -> ()) deps
       let newsDict = Map.difference depsDict statusDict
-      statuses <- Map.traverseWithKey crawlNew newsDict
+      statuses <- Map.traverseWithKey crawlNew (traceShow ("newsDict", newsDict) newsDict)
       putMVar mvar (Map.union statuses statusDict)
       mapM_ readMVar statuses
       return blockedValue
@@ -277,7 +277,7 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
 
       paths <- filterM File.exists (map (`addRelative` fileName) srcDirs)
 
-      case paths of
+      case (traceShow ("crawlModule", fileName, paths) paths) of
         [path] ->
           case Map.lookup name foreigns of
             Just (Details.Foreign dep deps) ->
@@ -308,32 +308,25 @@ crawlModule env@(Env _ root projectType srcDirs buildID locals foreigns) mvar do
                   return $ SBadImport $ Import.AmbiguousForeign dep d ds
 
             Nothing ->
-              let
-                isCoreMod = Name.isCoreMod (traceShow ("isCoreMod", name, Name.isCoreMod name) name)
-              in
-                if isCoreMod || ( Name.isKernel name && Parse.isKernel projectType ) then
-                  do  let path = "src" </> ModuleName.toFilePath name <.> "js"
-                      exists <- File.exists path
-                      case (exists, isCoreMod) of
-                        (True, True) ->
-                          do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
-                              bytes <- File.readUtf8 path
-                              case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
-                                Nothing ->
-                                  error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
+              do  let isCoreMod = Name.isCoreMod (traceShow ("isCoreMod", name, Name.isCoreMod name) name)
+                  let path = "src" </> ModuleName.toFilePath name <.> "js"
+                  exists <- File.exists path
+                  case (traceShow ("isCoreModzz", name, (exists, isCoreMod)) (exists, isCoreMod)) of
+                    (True, True) ->
+                      do  let foreignMap = Map.map (\(Details.Foreign f _) -> f) foreigns
+                          bytes <- File.readUtf8 path
+                          case K.fromByteString (projectTypeToPkg projectType) foreignMap bytes of
+                            Nothing ->
+                              error $ "failed to read kernel file " ++ path ++ " for " ++ ModuleName.toChars name
 
-                                Just (K.Content imports chunks) ->
-                                  crawlDeps env mvar (fmap Src.getImportName imports) (SLocalKernel chunks)
-                        
-                        (False, True) ->
-                          return $ (traceShow ("NotFound00", name) SBadImport Import.NotFound)
-                        
-                        (_, _) ->
-                          return $ SKernel
-
-                        
-                else
-                  return $ (traceShow ("NotFound01", name, foreigns) SBadImport Import.NotFound)
+                            Just (K.Content imports chunks) ->
+                              crawlDeps env mvar (traceShow ("zzimports", fmap Src.getImportName imports) fmap Src.getImportName imports) (SLocalKernel chunks)
+                    
+                    (False, True) ->
+                      return $ (traceShow ("NotFound00", name) SBadImport Import.NotFound)
+                    
+                    (_, _) ->
+                      return $ SKernel
 
 
 crawlFile :: Env -> MVar StatusDict -> DocsNeed -> ModuleName.Raw -> FilePath -> File.Time -> Details.BuildID -> IO Status
